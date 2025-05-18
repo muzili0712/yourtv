@@ -22,8 +22,9 @@ https://yourtvcrypto.horsenma.net<br>
 https://t.me/yourtvapp<br>
 <img src="./tgyourtv.jpg" alt="image" width="200"/>
 ##  2025年5月18日更新<br>
+改善畫中畫模式下播放自動恢復邏輯與全屏一致<br>
 贊助作者改為加入群組<br>
-刪除歷史commit/tag，清理github，只保留目前最新的版本。<br>
+刪除歷史commit/tag，清理github，隻保留目前最新的版本。<br>
 ##  2025年5月17日更新<br>
 增加觸摸屏設備熄屏後台播放，設置界面增加後台播放開關。<br>
 ##  2025年5月15日更新<br>
