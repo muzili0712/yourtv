@@ -1,7 +1,7 @@
 
 # 你的電視
 
-電視視頻播放軟件，可以自定義視頻源
+電視直播播放軟件，可以自定義視頻源，內置數千測試有效的直播源。
 
 [yourtv](https://github.com/horsemail/yourtv)
 
