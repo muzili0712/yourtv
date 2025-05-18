@@ -129,6 +129,11 @@ class PlayerFragment : Fragment() {
                 binding.icon.visibility = View.GONE
                 binding.volume.visibility = View.GONE
                 binding.playerView.clearFocus()
+                // 增强播放恢复逻辑
+                if (player == null && tvModel != null) {
+                    updatePlayer() // 重新初始化播放器
+                    Log.d(TAG, "Player was null, reinitialized for ${tvModel!!.tv.title}")
+                }
                 // 检查播放状态，若停止则恢复
                 if (player?.isPlaying == false && tvModel != null) {
                     player?.prepare()
@@ -416,7 +421,7 @@ class PlayerFragment : Fragment() {
                 lastStopTime = System.currentTimeMillis()
                 Log.w(TAG, "Marking for retry: lastStopTime=$lastStopTime, cooldownRemaining=${if (System.currentTimeMillis() - lastSwitchTime < retryCooldown) retryCooldown - (System.currentTimeMillis() - lastSwitchTime) else 0}")
                 // 优化：即使 autoSwitchSource 禁用，也触发重试
-                if (System.currentTimeMillis() - lastSwitchTime >= retryCooldown && !isInPictureInPictureMode) {
+                if (System.currentTimeMillis() - lastSwitchTime >= retryCooldown) {
                     Log.w(TAG, "${tvModel?.tv?.title} error, retrying immediately")
                     tvModel?.let { switchSource(it) }
                     lastSwitchTime = System.currentTimeMillis()
@@ -592,7 +597,7 @@ class PlayerFragment : Fragment() {
             val currentTime = System.currentTimeMillis()
             if (player != null && tvModel != null && isResumed) {
                 // 新增：检查暂停时间，避免 onPause 误触发
-                if (lastPauseTime > lastStopTime && currentTime - lastPauseTime < stopDurationThreshold) {
+                if (!isInPictureInPictureMode && lastPauseTime > lastStopTime && currentTime - lastPauseTime < stopDurationThreshold) {
                     Log.d(TAG, "Playback check skipped: recent pause at $lastPauseTime")
                     handler.postDelayed(this, checkPlaybackInterval)
                     return
