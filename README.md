@@ -6,8 +6,6 @@
 [yourtv](https://github.com/horsemail/yourtv)
 
 這是一個IPTV直播軟件，內置定期更新測試過的直播源。<br><br>
-測試碼：1234567890CDEFGHIJKL，有效期：2025年6月30日<br>
-僅限100台設備使用。<br>
 <br>
 僅供測試，嚴禁傳播。<br>
 測試完，請及時刪除。<br>
@@ -19,7 +17,13 @@ https://yourtvcrypto.horsenma.net<br>
 ## 測試碼
 默認硬解碼版，適合電視機等硬件解碼比較好的設備。<br>
 手機使用，最好進入設置界麵切換為軟解碼，否則有的直播源會沒聲音。<br>
-如需完整測試，需要測試碼。需要測試碼請留言郵箱申請。<br>
+如需測試碼，請加入TG群組，群組內公開測試碼/或自動髮放。<br>
+## 電報群組
+https://t.me/yourtvapp<br>
+<img src="./tgyourtv.jpg" alt="image" width="200"/>
+##  2025年5月18日更新<br>
+贊助作者改為加入群組<br>
+刪除歷史commit/tag，清理github，只保留目前最新的版本。<br>
 ##  2025年5月17日更新<br>
 增加觸摸屏設備熄屏後台播放，設置界面增加後台播放開關。<br>
 ##  2025年5月15日更新<br>
@@ -138,16 +142,12 @@ adb install YourTV.apk
 * 為什麼遠程配置視頻源文本後，再次打開應用後又恢復到原來的配置？<br>
 
   如果“應用啟動后更新視頻源”開啟後，且存在視頻源地址，則會自動更新，可能會覆蓋已保存的視頻源文本。<br>
-  
+
 * 自己編譯APP注意事項：<br>
   1、資源文件需要自己逐個確認設置為自己的信息，特別是cloudflare.txt/github_private.txt/sources.txt<br>
-     需使用加密解密工具網站 https://yourtvcrypto.horsenma.net  加密後存儲。<br>
+  需使用加密解密工具網站 https://yourtvcrypto.horsenma.net  加密後存儲。<br>
   2、我上傳的APK文件與源碼可能不同步，APK文件比較新，源碼更新一般落後幾天，請注意查看，<br>
   3、我上傳的APK文件使用的加密解密邏輯與項目內加密解密邏輯：https://yourtvcrypto.horsenma.net  不同，目的保護我的私有資源信息。<br>
-
-## 電報群組
-https://t.me/+dncSbFwJPilhNjdh<br>
-<img src="./tgyourtv.jpg" alt="image" width="200"/>
 
 ## 感謝
 
