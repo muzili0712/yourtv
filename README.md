@@ -17,7 +17,7 @@ https://yourtvcrypto.horsenma.net<br>
 ## 測試碼
 默認硬解碼版，適合電視機等硬件解碼比較好的設備。<br>
 手機使用，最好進入設置界麵切換為軟解碼，否則有的直播源會沒聲音。<br>
-### 🔴 **如需測試碼，請加入TG群組，群組內公開測試碼/或自動髮放。**<br>
+### 🔴 **如需測試碼，請加入TG群組，群組內公開測試碼/或自動髮放/或申請提供。**<br>
 ## 電報群組
 https://t.me/yourtvapp<br>
 <img src="./tgyourtv.jpg" alt="image" width="200"/>
