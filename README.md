@@ -18,6 +18,7 @@ https://yourtvcrypto.horsenma.net<br>
 ## 電報群組
 https://t.me/yourtvapp<br>
 <img src="./tgyourtv.jpg" alt="image" width="200"/>
+# 更新歷史
 ##  2025年5月18日更新<br>
 改善畫中畫模式下播放自動恢復邏輯與全屏一致<br>
 贊助作者改為加入群組<br>
