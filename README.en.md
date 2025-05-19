@@ -1,3 +1,7 @@
+## 🌐 語言 / Languages
+
+- [🇨🇳 中文說明](README.zh.md)
+- [🇺🇸 English Version](README.en.md)
 # Your TV
 
 Live TV playback software, you can customize the video source, built-in thousands of tested live sources.
