@@ -1,6 +1,6 @@
 ## 🌐 語言 / Languages
 
-- [🇨🇳 中文說明](README.zh.md)
+- [🇨🇳 中文說明](README.md)
 - [🇺🇸 English Version](README.en.md)
 # Your TV
 
