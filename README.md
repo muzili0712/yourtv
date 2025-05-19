@@ -2,15 +2,12 @@
 # 你的電視
 
 電視直播播放軟件，可以自定義視頻源，內置數千測試有效的直播源。
-
 [yourtv](https://github.com/horsemail/yourtv)
-
 這是一個IPTV直播軟件，內置定期更新測試過的直播源。<br><br>
-<br>
 僅供測試，嚴禁傳播。<br>
 測試完，請及時刪除。<br>
-<br>
-## 在線加密解密：（兼容Tvbox的源加密解密）<br>
+### 🔴 **請仔細閱讀後面的[使用說明](#使用)。**
+## 在線加密解密：（兼容Tvbox的源加密解密）
 https://yourtvcrypto.horsenma.net<br>
 與項目內加密解密邏輯完全一致<br>
 <br>
