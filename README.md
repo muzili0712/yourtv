@@ -1,4 +1,7 @@
+## 🌐 語言 / Languages
 
+- [🇨🇳 中文說明](README.MD)
+- [🇺🇸 English Version](README.en.md)
 # 你的電視
 
 電視直播播放軟件，可以自定義視頻源，內置數千測試有效的直播源。
