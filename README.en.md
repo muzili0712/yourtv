@@ -22,6 +22,8 @@ For mobile phones, it is best to enter the settings interface to switch to soft 
 https://t.me/yourtvapp<br>
 <img src="./tgyourtv.jpg" alt="image" width="200"/>
 ## Update History
+### Updated on May 20, 2025<br>
+Fixed the issue of losing focus on the TV settings interface
 ### Updated on May 18, 2025<br>
 Improve the playback auto-recovery logic in picture-in-picture mode to be consistent with full screen<br>
 Sponsored authors are changed to join the group<br>
