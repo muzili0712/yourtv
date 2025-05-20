@@ -23,7 +23,8 @@ https://t.me/yourtvapp<br>
 <img src="./tgyourtv.jpg" alt="image" width="200"/>
 ## Update History
 ### Updated on May 20, 2025<br>
-Fixed the issue of losing focus on the TV settings interface
+Fixed the issue of losing focus on the TV settings interface<br>
+Fixed the issue where the TV menu group/channel interface loses focus and does not automatically focus on the currently playing channel<br>
 ### Updated on May 18, 2025<br>
 Improve the playback auto-recovery logic in picture-in-picture mode to be consistent with full screen<br>
 Sponsored authors are changed to join the group<br>
