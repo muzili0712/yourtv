@@ -22,6 +22,8 @@ https://yourtvcrypto.horsenma.net<br>
 https://t.me/yourtvapp<br>
 <img src="./tgyourtv.jpg" alt="image" width="200"/>
 ## 更新歷史
+###  2025年5月20日更新<br>
+修復電視機設置界面焦點丟失
 ###  2025年5月18日更新<br>
 改善畫中畫模式下播放自動恢復邏輯與全屏一致<br>
 贊助作者改為加入群組<br>
