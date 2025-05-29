@@ -161,9 +161,9 @@ Need to use the encryption and decryption tool website https://yourtvcrypto.hors
 
 ## Thanks
 
-[live](https://github.com/fanmingming/live)
-[my-tv-0](https://github.com/lizongying/my-tv-0)
-[my-tv-1](https://github.com/lizongying/my-tv-1)
+[live](https://github.com/fanmingming/live)<br>
+[my-tv-0](https://github.com/lizongying/my-tv-0)<br>
+[my-tv-1](https://github.com/lizongying/my-tv-1)<br>
 
 ## Apologies
 
