@@ -162,8 +162,9 @@ adb install YourTV.apk
 
 ## 感謝
 
-[live](https://github.com/fanmingming/live)
-[my-tv-0](https://github.com/lizongying/my-tv-0)
+[live](https://github.com/fanmingming/live)<br>
+[my-tv-0](https://github.com/lizongying/my-tv-0)<br>
+[my-tv-1](https://github.com/lizongying/my-tv-1)<br>
 
 ## 致歉
 
