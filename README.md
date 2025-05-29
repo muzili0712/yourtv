@@ -22,6 +22,10 @@ https://yourtvcrypto.horsenma.net<br>
 https://t.me/yourtvapp<br>
 <img src="./tgyourtv.jpg" alt="image" width="200"/>
 ## 更新歷史
+###  2025年5月29日更新<br>
+簡單集成webview網頁視頻<br>
+暫未有騰訊webview X5可選功能<br>
+未來可能加入<br>
 ###  2025年5月20日更新<br>
 修復電視機設置界面焦點丟失<br>
 修復電視機菜單組/頻道界面焦點丟失，不自動定位焦點到當前播放頻道的問題<br>
