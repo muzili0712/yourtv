@@ -23,7 +23,7 @@ https://t.me/yourtvapp<br>
 <img src="./tgyourtv.jpg" alt="image" width="200"/>
 ## Update History
 ### Updated on May 29, 2025<br>
-Simple integration of webview web video<br>
+Simple integration of webview web video, some settings are not perfect<br>
 No optional function of Tencent webview X5 yet<br>
 May be added in the future<br>
 ### Updated on May 20, 2025<br>
