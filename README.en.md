@@ -22,6 +22,10 @@ For mobile phones, it is best to enter the settings interface to switch to soft 
 https://t.me/yourtvapp<br>
 <img src="./tgyourtv.jpg" alt="image" width="200"/>
 ## Update History
+### Updated on May 29, 2025<br>
+Simple integration of webview web video<br>
+No optional function of Tencent webview X5 yet<br>
+May be added in the future<br>
 ### Updated on May 20, 2025<br>
 Fixed the issue of losing focus on the TV settings interface<br>
 Fixed the issue where the TV menu group/channel interface loses focus and does not automatically focus on the currently playing channel<br>
