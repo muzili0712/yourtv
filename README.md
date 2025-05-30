@@ -4,7 +4,7 @@
 - [🇺🇸 English Version](README.en.md)
 # 你的電視
 
-電視直播播放軟件，可以自定義視頻源，內置數千測試有效的直播源。
+IPTV/網頁視頻播放軟件，内置数千直播源，可自定義源，IPTV支持畫中畫和熄屏播放。
 [yourtv](https://github.com/horsemail/yourtv)
 這是一個IPTV直播軟件，內置定期更新測試過的直播源。<br><br>
 僅供測試，嚴禁傳播。<br>
