@@ -6,7 +6,7 @@
 
 IPTV/web video player software, with thousands of built-in live sources, customizable sources, IPTV supports picture-in-picture and off-screen playback.
 [yourtv](https://github.com/horsemail/yourtv)
-This is an IPTV live broadcast software, built-in regularly updated and tested live sources. <br><br>
+<br>
 For testing only, strictly prohibited from spreading. <br>
 After testing, please delete in time. <br>
 ### 🔴 **Please read the [Instructions](#use) carefully. **
