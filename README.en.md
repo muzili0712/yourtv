@@ -4,7 +4,7 @@
 - [🇺🇸 English Version](README.en.md)
 # Your TV
 
-Live TV playback software, you can customize the video source, built-in thousands of tested live sources.
+IPTV/web video player software, with thousands of built-in live sources, customizable sources, IPTV supports picture-in-picture and off-screen playback.
 [yourtv](https://github.com/horsemail/yourtv)
 This is an IPTV live broadcast software, built-in regularly updated and tested live sources. <br><br>
 For testing only, strictly prohibited from spreading. <br>
