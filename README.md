@@ -22,6 +22,9 @@ https://yourtvcrypto.horsenma.net<br>
 https://t.me/yourtvapp<br>
 <img src="./tgyourtv.jpg" alt="image" width="200"/>
 ## 更新歷史
+###  2025年5月30日更新<br>
+發布v1.7.1版本
+修復各種BUG
 ###  2025年5月29日更新<br>
 簡單集成webview網頁視頻，部分設置功能未完善<br>
 暫未有騰訊webview X5可選功能<br>
