@@ -22,6 +22,11 @@ For mobile phones, it is best to enter the settings interface to switch to soft 
 https://t.me/yourtvapp<br>
 <img src="./tgyourtv.jpg" alt="image" width="200"/>
 ## Update History
+
+### Updated on June 2, 2025<br>
+Added support for Tencent Webview X5
+Fixed various bugs<br>
+Optimized the experience<br>
 ### Updated on May 30, 2025<br>
 Released version v1.7.1
 Fixed various bugs
