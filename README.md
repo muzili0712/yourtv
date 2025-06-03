@@ -23,10 +23,10 @@ https://t.me/yourtvapp<br>
 <img src="./tgyourtv.jpg" alt="image" width="200"/>
 ## 更新歷史
 ###  2025年6月3日更新<br>
-取消獨立切換網頁視頻/IPTV的界麵，
-修改到設置界麵的開關。
-修複自定義直播源解析失敗。
-修複其他BUG。
+取消獨立切換網頁視頻/IPTV的界麵。<br>
+修改到設置界麵的開關。<br>
+修複自定義直播源解析失敗。<br>
+修複其他BUG。<br>
 ###  2025年6月2日更新<br>
 增加騰訊Webview X5支持
 修複各種BUG<br>
