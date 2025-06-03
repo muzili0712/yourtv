@@ -22,13 +22,15 @@ https://yourtvcrypto.horsenma.net<br>
 https://t.me/yourtvapp<br>
 <img src="./tgyourtv.jpg" alt="image" width="200"/>
 ## 更新歷史
+###  2025年6月3日更新<br>
+取消獨立切換網頁視頻/IPTV的界麵，
+修改到設置界麵的開關。
+修複自定義直播源解析失敗。
+修複其他BUG。
 ###  2025年6月2日更新<br>
 增加騰訊Webview X5支持
 修複各種BUG<br>
 優化體唸<br>
-###  2025年5月30日更新<br>
-發布v1.7.1版本<br>
-修復各種BUG<br>
 ###  2025年5月30日更新<br>
 發布v1.7.1版本<br>
 修復各種BUG<br>
