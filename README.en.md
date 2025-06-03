@@ -23,10 +23,10 @@ https://t.me/yourtvapp<br>
 <img src="./tgyourtv.jpg" alt="image" width="200"/>
 ## Update History
 ### Updated on June 3, 2025<br>
-Cancel the interface for switching between web video and IPTV independently,
-Change to the switch in the settings interface.
-Fix the problem of parsing custom live sources.
-Fix other bugs.
+Cancel the interface for switching between web video and IPTV independently。<br>
+Change to the switch in the settings interface.<br>
+Fix the problem of parsing custom live sources.<br>
+Fix other bugs.<br>
 ### Updated on June 2, 2025<br>
 Added support for Tencent Webview X5
 Fixed various bugs<br>
