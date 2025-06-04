@@ -23,10 +23,10 @@ https://t.me/yourtvapp<br>
 <img src="./tgyourtv.jpg" alt="image" width="200"/>
 ## 更新歷史
 ###  2025年6月4日更新<br>
-改善UI畫面，統一化和透明化<br>
+修複UI畫麵，統一化和透明化<br>
 IPTV解析邏輯優化<br>
-修復各種BUG<br>
-其他改善體驗的修復<br>
+修複各種BUG<br>
+其他體驗的优化<br>
 ###  2025年6月3日更新<br>
 取消獨立切換網頁視頻/IPTV的界麵。<br>
 修改到設置界麵的開關。<br>
