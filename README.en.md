@@ -21,7 +21,12 @@ For mobile phones, it is best to enter the settings interface to switch to soft 
 ## Telegram Group
 https://t.me/yourtvapp<br>
 <img src="./tgyourtv.jpg" alt="image" width="200"/>
-## Update History
+## Update History<br>
+### Updated on June 4, 2025<br>
+Improved UI, unified and transparent<br>
+Optimized IPTV parsing logic<br>
+Fixed various bugs<br>
+Other fixes to improve experience<br>
 ### Updated on June 3, 2025<br>
 Cancel the interface for switching between web video and IPTV independently。<br>
 Change to the switch in the settings interface.<br>
