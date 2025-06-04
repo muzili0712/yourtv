@@ -126,7 +126,8 @@ TV:<br>
 4. Left key: display program list information<br>
 5. Right key: switch different live source addresses of the same channel<br>
 6. Long press the menu key, or quickly press the menu key multiple times to display the settings interface<br>
-7. Other functions, test by yourself. <br>
+7. Switch IPTV/web video: Settings interface--Switch IPTV/Switch web video switch<br>
+8. Other functions, test them yourself. <br>
 
 <br>
 Touch screen:<br>
@@ -140,7 +141,8 @@ Touch screen:<br>
 8. Long press the touch screen: display the current channel program list<br>
 9. Press the home page (mobile phone virtual circle key) key to enter picture-in-picture<br>
 10. The touch screen can still play when the screen is turned off (there is a cancel switch in the settings interface)<br>
-11. Other functions, test by yourself. <br>
+11. Switch IPTV/web video: Settings interface--Switch IPTV/Switch web video switch<br>
+12. Other functions, test them yourself. <br>
 
 * After opening the configuration, select remote configuration, scan the QR code to configure the video source, etc. You can also directly configure the address remotely http://0.0.0.0:34567
 * After turning on "Automatically update live source every day", the live source will be automatically updated after the application is started
