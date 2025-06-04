@@ -26,7 +26,7 @@ https://t.me/yourtvapp<br>
 Improved UI, unified and transparent<br>
 Optimized IPTV parsing logic<br>
 Fixed various bugs<br>
-Other fixes to improve experience<br>
+Other experience optimization<br>
 ### Updated on June 3, 2025<br>
 Cancel the interface for switching between web video and IPTV independently。<br>
 Change to the switch in the settings interface.<br>
