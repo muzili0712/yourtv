@@ -18,12 +18,12 @@ https://yourtvcrypto.horsenma.net<br>
 手機使用，最好進入設置界麵切換為軟解碼，否則有的直播源會沒聲音。<br>
 ### 🔴 **如需測試碼，請加入TG群組，群組內公開測試碼/或自動髮放/或申請提供。**<br>
 ## 電報群組
-https://t.me/yourtvapp<br>
-<img src="./tgyourtv.jpg" alt="image" width="200"/><br>
-<img src="./527.jpg" alt="image"/><br>
-<img src="./528.jpg" alt="image"/><br>
-<img src="./529.jpg" alt="image"/><br>
-<img src="./530.jpg" alt="image"/><br>
+https://t.me/yourtvapp<br><br>
+<img src="./tgyourtv.jpg" alt="image" width="200"/><br><br>
+<img src="./527.jpg" alt="image"/><br><br>
+<img src="./528.jpg" alt="image"/><br><br>
+<img src="./529.jpg" alt="image"/><br><br>
+<img src="./530.jpg" alt="image"/><br><br>
 <img src="./531.jpg" alt="image"/><br>
 ## 更新歷史
 ###  2025年6月7日更新<br>
