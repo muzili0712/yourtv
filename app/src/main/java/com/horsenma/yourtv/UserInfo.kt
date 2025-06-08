@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.provider.Settings
 import android.util.Log
+import com.google.common.reflect.TypeToken
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
@@ -85,6 +86,8 @@ object UserInfoManager {
     private const val KEY_FILES = "file_mappings"
     private const val KEY_CACHE_TIME = "cache_time"
     private const val CACHE_DURATION = 24 * 60 * 60 * 1000 // 24 小时
+    private const val KEY_TEST_CODES = "test_codes"
+    private const val KEY_ACTIVE_USER_ID = "active_user_id"
 
 
     fun initialize(context: Context) {
@@ -162,7 +165,9 @@ object UserInfoManager {
                 Log.w(TAG, "绑定检查失败: key=$key, deviceId=$deviceId, error=$errorMessage")
                 return Pair(false, errorMessage)
             }
-            val user = getUserInfoById(key) ?: run {
+            // 在函数开头，替换原有的 user 获取逻辑
+            val (warnings, remoteUsers) = downloadRemoteUserInfo() // 强制刷新远程数据
+            val user = remoteUsers.find { it.userId == key } ?: run {
                 Log.e(TAG, "用户未找到: key=$key")
                 return Pair(false, "无效的测试码")
             }
@@ -216,13 +221,12 @@ object UserInfoManager {
                     addProperty("userId", user.userId)
                     addProperty("userLimitDate", user.userLimitDate)
                     addProperty("userType", user.userType)
-                    addProperty("vipUserUrl", user.vipUserUrl)
+                    addProperty("vipUserUrl", user.vipUserUrl) // 使用最新 remoteUsers 的 vipUserUrl
                     addProperty("maxDevices", user.maxDevices)
                     add("devices", JsonArray().apply { updatedDevices.forEach { add(it) } })
-                    add("indemnify", JsonArray())
+                    add("indemnify", JsonArray().apply { user.indemnify?.forEach { add(it) } })
                 }
                 usersArray.add(newUser)
-                rawJson.add("users", usersArray)
             }
             rawJson.addProperty("backupDate", SimpleDateFormat("yyyyMMdd", Locale.US).format(Date()))
             Log.d(TAG, "rawJsonCache更新: $rawJson")
@@ -269,6 +273,9 @@ object UserInfoManager {
                     updateDate = today
                 )
             )
+            // 新增：保存测试码和直播源文件名
+            val sourceName = user.vipUserUrl.substringAfterLast("/")
+            saveTestCode(key, sourceName)
             Log.d(TAG, "绑定完成: key=$key, devices=$updatedDevices")
             return Pair(true, null)
         } catch (e: Exception) {
@@ -595,30 +602,61 @@ object UserInfoManager {
     }
 
     fun validateKey(key: String, remoteUsers: List<RemoteUserInfo>): RemoteUserInfo? {
+        // 記錄輸入參數
+        Log.d(TAG, "validateKey called with key: $key, remoteUsers size: ${remoteUsers.size}")
+
+        // 查找用戶
         val user = remoteUsers.find { it.userId == key }
         if (user == null) {
             Log.w(TAG, "No user found for key: $key")
+            // 清理失效测试码
+            val testCodes = getTestCodes().toMutableMap()
+            if (testCodes.remove(key) != null) {
+                with(prefs.edit()) {
+                    putString(KEY_TEST_CODES, gson.toJson(testCodes))
+                    apply()
+                }
+                Log.d(TAG, "Removed invalid test code: $key")
+            }
             return null
         }
+        Log.d(TAG, "Found user for key: $key, userLimitDate: ${user.userLimitDate}")
+
         return try {
+            // 獲取當前日期
             val today = SimpleDateFormat("yyyyMMdd", Locale.US).format(Date())
-            // Parse userLimitDate, handling both yyyyMMdd and yyyy-MM-dd formats
+            Log.d(TAG, "Current date (formatted): $today")
+
+            // 選擇日期格式
             val sdfInput = if (user.userLimitDate.contains("-")) {
+                Log.d(TAG, "Using yyyy-MM-dd format for userLimitDate: ${user.userLimitDate}")
                 SimpleDateFormat("yyyy-MM-dd", Locale.US)
             } else {
+                Log.d(TAG, "Using yyyyMMdd format for userLimitDate: ${user.userLimitDate}")
                 SimpleDateFormat("yyyyMMdd", Locale.US)
             }
+
+            // 解析日期
             val userDate = sdfInput.parse(user.userLimitDate)
             val currentDate = SimpleDateFormat("yyyyMMdd", Locale.US).parse(today)
+            Log.d(TAG, "Parsed userDate: $userDate, currentDate: $currentDate")
 
-            if (userDate != null && currentDate != null && !userDate.before(currentDate)) {
+            // 檢查日期是否有效
+            if (userDate == null || currentDate == null) {
+                Log.e(TAG, "Date parsing failed: userDate=$userDate, currentDate=$currentDate, userLimitDate=${user.userLimitDate}")
+                return null
+            }
+
+            // 比較日期
+            if (!userDate.before(currentDate)) {
+                Log.d(TAG, "Key is valid: $key, userLimitDate=${user.userLimitDate} is not before $today")
                 user
             } else {
-                Log.w(TAG, "User key expired: $key, limitDate: ${user.userLimitDate}")
+                Log.w(TAG, "Key expired: $key, userLimitDate=${user.userLimitDate} is before $today")
                 null
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to validate key: ${e.message}", e)
+            Log.e(TAG, "Failed to validate key: $key, userLimitDate=${user.userLimitDate}, error: ${e.message}", e)
             null
         }
     }
@@ -636,4 +674,41 @@ object UserInfoManager {
             updateDate = today
         )
     }
+
+    fun saveTestCode(userId: String, sourceName: String) {
+        val testCodes = getTestCodes().toMutableMap()
+        testCodes[userId] = sourceName
+        try {
+            with(prefs.edit()) {
+                putString(KEY_TEST_CODES, gson.toJson(testCodes))
+                putString(KEY_ACTIVE_USER_ID, userId)
+                apply()
+            }
+            // 验证保存结果
+            val savedCodes = getTestCodes()
+            if (savedCodes[userId] == sourceName) {
+                Log.d(TAG, "Saved test code: userId=$userId, sourceName=$sourceName")
+            } else {
+                Log.e(TAG, "Failed to verify saved test code: userId=$userId, expected=$sourceName, actual=$savedCodes")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to save test code: userId=$userId, error=${e.message}", e)
+        }
+    }
+
+    fun getTestCodes(): Map<String, String> {
+        return try {
+            prefs.getString(KEY_TEST_CODES, null)?.let {
+                gson.fromJson(it, object : TypeToken<Map<String, String>>() {}.type)
+            } ?: emptyMap()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to load test codes: ${e.message}", e)
+            emptyMap()
+        }
+    }
+
+    fun getActiveUserId(): String? {
+        return prefs.getString(KEY_ACTIVE_USER_ID, null)
+    }
+
 }

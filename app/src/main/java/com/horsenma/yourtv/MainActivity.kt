@@ -23,6 +23,7 @@ import android.widget.TextView
 import android.view.WindowManager
 import android.widget.PopupWindow
 import android.widget.RelativeLayout
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -31,12 +32,12 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import com.horsenma.yourtv.databinding.SettingsWebBinding
 import java.util.Locale
+import java.io.File
 import kotlin.math.abs
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import android.widget.EditText
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import kotlinx.coroutines.*
@@ -45,40 +46,53 @@ import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.flow.collect
 import com.horsenma.yourtv.models.TVModel
 import androidx.core.view.isVisible
-
+import android.app.Dialog
+import android.content.Intent
+import com.horsenma.yourtv.Utils.ViewModelUtils
 
 @Suppress("UNUSED_EXPRESSION", "DEPRECATION")
 class MainActivity : AppCompatActivity() {
 
     private val TAG = "MainActivity"
     private var ok = 0
-    internal var playerFragment: PlayerFragment = PlayerFragment()
-    private val errorFragment = ErrorFragment()
-    private val loadingFragment = LoadingFragment()
-    private var infoFragment = InfoFragment()
-    private var channelFragment = ChannelFragment()
-    private var timeFragment = TimeFragment()
-    private var menuFragment = MenuFragment()
-    private var settingFragment = SettingFragment()
-    private var programFragment = ProgramFragment()
+    internal var playerFragment = com.horsenma.yourtv.PlayerFragment()
+    internal val errorFragment = com.horsenma.yourtv.ErrorFragment()
+    internal val loadingFragment = com.horsenma.yourtv.LoadingFragment()
+    internal var infoFragment = com.horsenma.yourtv.InfoFragment()
+    internal var channelFragment = com.horsenma.yourtv.ChannelFragment()
+    internal var timeFragment = com.horsenma.yourtv.TimeFragment()
+    internal var menuFragment = com.horsenma.yourtv.MenuFragment()
+    internal var settingFragment = com.horsenma.yourtv.SettingFragment()
+    internal var programFragment = com.horsenma.yourtv.ProgramFragment()
 
     private val handler = Handler(Looper.myLooper()!!)
     private val delayHideMenu = 10 * 1000L
-    private val delayHideSetting = 3 * 60 * 1000L
-
-    private var doubleBackToExitPressedOnce = false
+    private val delayHideSetting = 1 * 60 * 1000L
+    lateinit var gestureDetector: GestureDetector
+    private var server: SimpleServer? = null
 
     private var menuPressCount = 0
     private var lastMenuPressTime = 0L
     private val MENU_PRESS_INTERVAL = 300L
     private val MENU_TAP_INTERVAL = 500L
     private val REQUIRED_MENU_PRESSES = 4
+    private var lastSwitchTime = 0L
+    private val DEBOUNCE_INTERVAL = 2000L
+    private var lastBackPressTime = 0L
+    private val BACK_PRESS_INTERVAL = 2000L
 
-    private lateinit var gestureDetector: GestureDetector
+    private val handleTapRunnable = Runnable {
+        if (menuPressCount >= REQUIRED_MENU_PRESSES) {
+            showSetting()
+            menuPressCount = 0
+        } else if (menuPressCount == 2) {
+            showFragment(menuFragment)
+            menuActive()
+        }
+        menuPressCount = 0 // 重置计数
+    }
 
-    private var server: SimpleServer? = null
-
-    private lateinit var viewModel: MainViewModel
+    internal lateinit var viewModel: MainViewModel
 
     private var isSafeToPerformFragmentTransactions = false
     internal var usersInfo: List<String> = emptyList()
@@ -91,6 +105,10 @@ class MainActivity : AppCompatActivity() {
         isLoadingInputVisible = visible
     }
 
+    private lateinit var userVerificationHandler: UserVerificationHandler
+    private lateinit var dialog: Dialog
+    private lateinit var verificationCallback: VerificationCallback
+
     // Callback interface for verification dialog
     interface VerificationCallback {
         fun onKeyConfirmed(key: String)
@@ -100,6 +118,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         // 简化全屏设置
@@ -112,10 +131,47 @@ class MainActivity : AppCompatActivity() {
         window.navigationBarColor = Color.TRANSPARENT
 
         setContentView(R.layout.activity_main)
+        if (savedInstanceState == null) {
+            supportFragmentManager.beginTransaction()
+                .add(R.id.main_browse_fragment, loadingFragment)
+                .commitNow()
+        }
+
         UserInfoManager.initialize(applicationContext)
 
         // 初始化 ViewModel
         viewModel = ViewModelProvider(this)[MainViewModel::class.java]
+        userVerificationHandler = UserVerificationHandler(this, UserInfoManager, viewModel)
+
+        // 初始化 dialog 和 verificationCallback
+        dialog = Dialog(this)
+        verificationCallback = object : VerificationCallback {
+            override fun onKeyConfirmed(key: String) {
+                Log.d(TAG, "Verification key confirmed: $key")
+                setLoadingInputVisible(false)
+            }
+            override fun onSkip() {
+                Log.d(TAG, "Verification skipped")
+                setLoadingInputVisible(false)
+            }
+            override fun onCompleted() {
+                Log.d(TAG, "Verification completed")
+                setLoadingInputVisible(false)
+                hideFragment(loadingFragment)
+            }
+        }
+
+        // 调用 handleUserVerification
+        if (savedInstanceState == null) {
+            userVerificationHandler.handleUserVerification(dialog, verificationCallback)
+        }
+
+        // 新增：冷启动时检查 enableWebviewType，仅在首次冷启动执行
+        if (savedInstanceState == null && SP.enableWebviewType) {
+            Log.d(TAG, "First cold start with enableWebviewType=true, switching to WebView mode")
+            handleWebviewTypeSwitch(true)
+            return
+        }
 
         // 新增：冷启动时禁用用户输入和画中画，直到 listModel 初始化
         if (savedInstanceState == null) {
@@ -452,8 +508,22 @@ class MainActivity : AppCompatActivity() {
                     return true
                 }
             }
-            showFragment(menuFragment)
-            return handleTapCount(2)
+
+            // 记录双击
+            val currentTime = System.currentTimeMillis()
+            val timeSinceLastTap = currentTime - lastMenuPressTime
+            if (timeSinceLastTap <= MENU_TAP_INTERVAL) {
+                menuPressCount += 2
+            } else {
+                menuPressCount = 2
+            }
+            lastMenuPressTime = currentTime
+
+            // 延迟处理，等待可能的后续双击
+            handler.removeCallbacks(handleTapRunnable)
+            handler.postDelayed(handleTapRunnable, MENU_TAP_INTERVAL)
+
+            return true
         }
 
         override fun onLongPress(e: MotionEvent) {
@@ -655,7 +725,7 @@ class MainActivity : AppCompatActivity() {
             .commitNowAllowingStateLoss()
         // 强制确保视图可见
         fragment.view?.visibility = View.VISIBLE
-        fragment.view?.requestFocus()
+        // fragment.view?.requestFocus()
     }
 
     private fun hideFragment(fragment: Fragment) {
@@ -811,41 +881,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun back() {
-        if (menuFragment.isAdded && !menuFragment.isHidden) {
-            hideFragment(menuFragment)
-            return
-        }
-
-        if (programFragment.isAdded && !programFragment.isHidden) {
-            hideFragment(programFragment)
-            return
-        }
-
-        if (settingFragment.isAdded && !settingFragment.isHidden) {
-            hideFragment(settingFragment)
-            showTimeFragment()
-            return
-        }
-
-        if (channelFragment.isAdded && channelFragment.isVisible) {
-            channelFragment.hideSelf()
-            return
-        }
-
-        if (doubleBackToExitPressedOnce) {
-            super.onBackPressed()
-            return
-        }
-
-        doubleBackToExitPressedOnce = true
-        R.string.press_again_to_exit.showToast()
-
-        Handler(Looper.getMainLooper()).postDelayed({
-            doubleBackToExitPressedOnce = false
-        }, 2000)
-    }
-
     private fun showSetting() {
         lifecycleScope.launch(Dispatchers.Main) {
             if (programFragment.isAdded && !programFragment.isHidden) {
@@ -927,13 +962,11 @@ class MainActivity : AppCompatActivity() {
         } else {
             menuPressCount = tapCount
         }
-
         lastMenuPressTime = currentTime
 
-        if (menuPressCount >= REQUIRED_MENU_PRESSES) {
-            showSetting()
-            menuPressCount = 0
-        }
+        // 延迟处理，等待可能的后续点击
+        handler.removeCallbacks(handleTapRunnable)
+        handler.postDelayed(handleTapRunnable, MENU_TAP_INTERVAL)
         return true
     }
 
@@ -953,37 +986,53 @@ class MainActivity : AppCompatActivity() {
         return true
     }
 
+    @SuppressLint("GestureBackNavigation")
     fun onKey(keyCode: Int): Boolean {
         when (keyCode) {
-            KEYCODE_0,
-            KEYCODE_1,
-            KEYCODE_2,
-            KEYCODE_3,
-            KEYCODE_4,
-            KEYCODE_5,
-            KEYCODE_6,
-            KEYCODE_7,
-            KEYCODE_8,
-            KEYCODE_9 -> {
+            KEYCODE_ESCAPE, KEYCODE_BACK -> {
+                if (menuFragment.isAdded && !menuFragment.isHidden) {
+                    hideFragment(menuFragment)
+                    return true
+                }
+                if (settingFragment.isAdded && !settingFragment.isHidden) {
+                    hideFragment(settingFragment)
+                    showTimeFragment()
+                    return true
+                }
+                if (programFragment.isAdded && !programFragment.isHidden) {
+                    hideFragment(programFragment)
+                    return true
+                }
+                if (channelFragment.isAdded && channelFragment.isVisible) {
+                    channelFragment.hideSelf()
+                    return true
+                }
+                val currentTime = System.currentTimeMillis()
+                if (currentTime - lastBackPressTime < BACK_PRESS_INTERVAL) {
+                    finishAffinity()
+                    return true
+                }
+                lastBackPressTime = currentTime
+                R.string.press_back_exit.showToast()
+                return true
+            }
+            KEYCODE_0, KEYCODE_1, KEYCODE_2, KEYCODE_3, KEYCODE_4,
+            KEYCODE_5, KEYCODE_6, KEYCODE_7, KEYCODE_8, KEYCODE_9 -> {
                 showChannel(keyCode - 7)
                 return true
             }
-            KEYCODE_ESCAPE,
-            KEYCODE_BACK -> {
-                back()
-                return true
-            }
-            KEYCODE_BOOKMARK,
-            KEYCODE_UNKNOWN,
-            KEYCODE_HELP,
-            KEYCODE_SETTINGS,
-            KEYCODE_MENU -> {
+            KEYCODE_BOOKMARK, KEYCODE_UNKNOWN, KEYCODE_HELP,
+            KEYCODE_SETTINGS, KEYCODE_MENU -> {
+                // 新增：优先检查 MenuFragment 是否可见
+                if (menuFragment.isAdded && !menuFragment.isHidden) {
+                    // 直接返回 false，让 MenuFragment 的 onKeyListener 处理
+                    return false
+                }
                 return handleSettingsKeyPress()
             }
             KEYCODE_DPAD_UP, KEYCODE_CHANNEL_UP -> {
                 if (isLoadingInputVisible) {
-                    val loadingFragment = supportFragmentManager.findFragmentByTag(LoadingFragment.TAG) as? LoadingFragment
-                    if (loadingFragment != null && loadingFragment.isVisible && loadingFragment.isInputUIVisible()) {
+                    if (userVerificationHandler.isInputUIVisible()) {
                         return true // 焦点切换由 XML 的 nextFocusUp 处理
                     }
                 }
@@ -999,8 +1048,7 @@ class MainActivity : AppCompatActivity() {
 
             KEYCODE_DPAD_DOWN, KEYCODE_CHANNEL_DOWN -> {
                 if (isLoadingInputVisible) {
-                    val loadingFragment = supportFragmentManager.findFragmentByTag(LoadingFragment.TAG) as? LoadingFragment
-                    if (loadingFragment != null && loadingFragment.isVisible && loadingFragment.isInputUIVisible()) {
+                    if (userVerificationHandler.isInputUIVisible()) {
                         return true // 焦点切换由 XML 的 nextFocusDown 处理
                     }
                 }
@@ -1016,25 +1064,24 @@ class MainActivity : AppCompatActivity() {
 
             KEYCODE_ENTER, KEYCODE_DPAD_CENTER -> {
                 if (isLoadingInputVisible) {
-                    val loadingFragment = supportFragmentManager.findFragmentByTag(LoadingFragment.TAG) as? LoadingFragment
-                    if (loadingFragment != null && loadingFragment.isVisible && loadingFragment.isInputUIVisible()) {
+                    if (userVerificationHandler.isInputUIVisible()) {
                         val currentFocus = currentFocus
                         if (currentFocus?.id == R.id.confirm_button) {
-                            val key = loadingFragment.view?.findViewById<EditText>(R.id.key_input)?.text?.toString()?.trim() ?: ""
+                            val key = userVerificationHandler.getKeyInputText()?.trim() ?: ""
                             if (key.isNotEmpty() && key.matches("[0-9A-Z]{1,20}".toRegex())) {
-                                loadingFragment.triggerConfirm(key)
+                                userVerificationHandler.triggerConfirm(key, dialog, verificationCallback)
                             } else {
-                                loadingFragment.view?.findViewById<TextView>(R.id.errorText)?.apply {
-                                    text = "測試碼格式錯，請重新輸入。"
-                                    visibility = View.VISIBLE
-                                }
-                                loadingFragment.view?.findViewById<View>(R.id.key_input)?.requestFocus()
+                                userVerificationHandler.showErrorText("測試碼格式錯，請重新輸入。")
+                                userVerificationHandler.requestKeyInputFocus()
                             }
+                            settingActive() // 新增：确认按钮按键重置计时器
                             return true
                         } else if (currentFocus?.id == R.id.skip_button) {
-                            loadingFragment.triggerSkip()
+                            userVerificationHandler.triggerSkip(dialog, verificationCallback)
+                            settingActive() // 新增：确认按钮按键重置计时器
                             return true
                         }
+                        settingActive() // 新增：确认按钮按键重置计时器
                         return true
                     }
                 }
@@ -1049,7 +1096,7 @@ class MainActivity : AppCompatActivity() {
             KEYCODE_DPAD_LEFT -> {
                 if (isLoadingInputVisible) {
                     val loadingFragment = supportFragmentManager.findFragmentByTag(LoadingFragment.TAG) as? LoadingFragment
-                    if (loadingFragment != null && loadingFragment.isVisible && loadingFragment.isInputUIVisible()) {
+                    if (loadingFragment != null && loadingFragment.isVisible && userVerificationHandler.isInputUIVisible()) {
                         val currentFocus = currentFocus
                         if (currentFocus?.id == R.id.skip_button) {
                             val confirmButton = loadingFragment.view?.findViewById<View>(R.id.confirm_button)
@@ -1071,7 +1118,7 @@ class MainActivity : AppCompatActivity() {
             KEYCODE_DPAD_RIGHT -> {
                 if (isLoadingInputVisible) {
                     val loadingFragment = supportFragmentManager.findFragmentByTag(LoadingFragment.TAG) as? LoadingFragment
-                    if (loadingFragment != null && loadingFragment.isVisible && loadingFragment.isInputUIVisible()) {
+                    if (loadingFragment != null && loadingFragment.isVisible && userVerificationHandler.isInputUIVisible()) {
                         val currentFocus = currentFocus
                         if (currentFocus?.id == R.id.confirm_button) {
                             val skipButton = loadingFragment.view?.findViewById<View>(R.id.skip_button)
@@ -1117,20 +1164,15 @@ class MainActivity : AppCompatActivity() {
 
     // 保留原有 onKeyDown，仅处理返回键
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        // 新增：禁用用户输入时拦截按键
         if (isInputDisabled) {
             Log.d(TAG, "Key input blocked until listModel initialized, keyCode=$keyCode")
             return true
         }
-        if (keyCode == KeyEvent.KEYCODE_BACK) {
-            back()
+        if (onKey(keyCode)) {
             return true
         }
-        return if (onKey(keyCode)) {
-            true
-        } else {
-            super.onKeyDown(keyCode, event)
-        }
+        // 不调用 super.onKeyDown，阻止系统默认退出
+        return false
     }
 
     // 新增：触摸屏检测方法，与 PlayerFragment 一致
@@ -1181,6 +1223,7 @@ class MainActivity : AppCompatActivity() {
         showTimeFragment()
     }
 
+    // 在 onPause 中暂停播放并释放资源
     override fun onPause() {
         super.onPause()
         isSafeToPerformFragmentTransactions = false
@@ -1218,6 +1261,89 @@ class MainActivity : AppCompatActivity() {
             )
         } catch (_: Exception) {
             super.attachBaseContext(base)
+        }
+    }
+
+    // 新增方法，位置：MainActivity 类内部，靠近 viewModel 定义
+    fun getViewModel(): MainViewModel {
+        return viewModel
+    }
+
+    fun handleWebviewTypeSwitch(enable: Boolean) {
+        if (!enable) return
+
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastSwitchTime < DEBOUNCE_INTERVAL) {
+            Log.d(TAG, "Switch ignored due to debounce")
+            return
+        }
+        lastSwitchTime = currentTime
+
+        lifecycleScope.launch(Dispatchers.Main) {
+            try {
+                if (playerFragment.isAdded && playerFragment.player != null) {
+                    playerFragment.player?.stop()
+                    playerFragment.player?.release()
+                    playerFragment.player = null
+                    Log.d(TAG, "PlayerFragment resources released")
+                }
+                ViewModelUtils.cancelViewModelJobs(viewModel)
+                supportFragmentManager.beginTransaction()
+                    .hide(playerFragment)
+                    .hide(infoFragment)
+                    .hide(channelFragment)
+                    .hide(menuFragment)
+                    .hide(settingFragment)
+                    .hide(programFragment)
+                    .hide(timeFragment)
+                    .hide(errorFragment)
+                    .hide(loadingFragment)
+                    .commitNowAllowingStateLoss()
+                Log.d(TAG, "All fragments hidden")
+                SP.enableWebviewType = true
+                Log.d(TAG, "SP.enableWebviewType set to false")
+                delay(500)
+                val intent = Intent(this@MainActivity, com.horsenma.mytv1.MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                }
+                startActivity(intent)
+                finish()
+                Log.d(TAG, "Switched to mytv1.MainActivity with new task")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error switching to mytv1.MainActivity: ${e.message}", e)
+                R.string.switch_webview_failed.showToast()
+            }
+        }
+    }
+
+    fun switchSource(filename: String, url: String) {
+        Toast.makeText(this, "正在切换直播源，请稍候再操作...", Toast.LENGTH_LONG).show()
+        val viewModel = ViewModelProvider(this)[MainViewModel::class.java]
+        val prefs = getSharedPreferences("SourceCache", Context.MODE_PRIVATE)
+        val cacheCodeFile = File(filesDir, MainViewModel.CACHE_CODE_FILE)
+        lifecycleScope.launch {
+            try {
+                val cachedContent = prefs.getString("cache_$filename", null)
+                if (cachedContent != null && cacheCodeFile.exists() && System.currentTimeMillis() - prefs.getLong("cache_time_$filename", 0) < 24 * 60 * 60 * 1000) {
+                    Log.d(TAG, "switchSource: Using cache for filename=$filename")
+                    viewModel.tryStr2Channels(cachedContent, cacheCodeFile, "", filename)
+                    prefs.edit().putString("active_source", filename).apply()
+                    supportFragmentManager.findFragmentByTag("MenuFragment")?.let { (it as MenuFragment).update() }
+                    Toast.makeText(this@MainActivity, "直播源切换成功", Toast.LENGTH_SHORT).show()
+                } else {
+                    Log.w(TAG, "switchSource: Invalid cache for filename=$filename, url=$url")
+                    viewModel.importFromUrl(url, filename, skipHistory = true)
+                    prefs.edit().putString("active_source", filename).apply()
+                    supportFragmentManager.findFragmentByTag("MenuFragment")?.let { (it as MenuFragment).update() }
+                    Toast.makeText(this@MainActivity, "直播源切换成功", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "switchSource: Failed for filename=$filename: ${e.message}")
+                viewModel.reset(this@MainActivity)
+                prefs.edit().putString("active_source", "default_channels.txt").apply()
+                supportFragmentManager.findFragmentByTag("MenuFragment")?.let { (it as MenuFragment).update() }
+                Toast.makeText(this@MainActivity, "切换失败，使用默认源", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 

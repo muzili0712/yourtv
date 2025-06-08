@@ -18,6 +18,9 @@ import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.lifecycle.ViewModel
+import kotlinx.coroutines.cancel
+
 
 enum class ISP {
     UNKNOWN,
@@ -165,25 +168,42 @@ object Utils {
     fun getUrls(url: String): List<String> {
         return if (url.startsWith("https://raw.githubusercontent.com") || url.startsWith("https://github.com")) {
             listOf(
-                "https://gh.llkk.cc/",
                 "https://github.moeyy.xyz/",
                 "https://mirror.ghproxy.com/",
+                "https://gh-proxy.llyke.com/",
+                "https://cf.ghproxy.cc/",
+                "https://gh.llkk.cc/",
                 "https://ghproxy.cn/",
-                "https://ghproxy.net/",
-                "https://ghproxy.click/",
+                "https://www.ghproxy.cc/",
                 "https://ghproxy.com/",
                 "https://github.moeyy.cn/",
-                "https://gh-proxy.llyke.com/",
-                "https://www.ghproxy.cc/",
-                "https://cf.ghproxy.cc/",
-                "https://ghp.ci/",
                 "https://ghfast.top/",
-                "https://github.horsenma.top/"
+                "https://github.horsenma.top/",
+                "https://ghp.ci/",
+                "https://ghproxy.net/",
+                "https://ghproxy.click/",
             ).map {
                 "$it$url"
             }
         } else {
             listOf(url)
+        }
+    }
+
+    // 位置：com.horsenma.yourtv.utils 或独立工具类
+    object ViewModelUtils {
+        fun cancelViewModelJobs(viewModel: ViewModel) {
+            try {
+                val scopeField = viewModel::class.java.getDeclaredField("viewModelScope")
+                scopeField.isAccessible = true
+                val scope = scopeField.get(viewModel) as? CoroutineScope
+                scope?.cancel()
+                Log.d("ViewModelUtils", "ViewModel jobs canceled")
+            } catch (e: NoSuchFieldException) {
+                Log.w("ViewModelUtils", "viewModelScope not found, skipping cancellation")
+            } catch (e: Exception) {
+                Log.e("ViewModelUtils", "Failed to cancel ViewModel jobs: ${e.message}", e)
+            }
         }
     }
 }

@@ -8,8 +8,11 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.DisplayMetrics
+import android.util.Log
 import android.view.WindowManager
 import android.widget.Toast
+import com.tencent.smtt.export.external.TbsCoreSettings
+import com.tencent.smtt.sdk.QbSdk
 import java.util.Locale
 
 class YourTVApplication : Application() {
@@ -24,6 +27,7 @@ class YourTVApplication : Application() {
         }
     }
 
+    private var isX5Initialized = false
     private lateinit var displayMetrics: DisplayMetrics
     private lateinit var realDisplayMetrics: DisplayMetrics
 
@@ -35,14 +39,14 @@ class YourTVApplication : Application() {
     private var density = 2.0f
     private var scale = 1.0f
 
-    lateinit var imageHelper:ImageHelper
+    lateinit var imageHelper: ImageHelper
 
     override fun onCreate() {
         super.onCreate()
         instance = this
-
         SP.init(this)
-        SP.softDecode = false
+        SP.compactMenu = true
+        initX5()
 
         displayMetrics = DisplayMetrics()
         realDisplayMetrics = DisplayMetrics()
@@ -74,6 +78,33 @@ class YourTVApplication : Application() {
         Thread.setDefaultUncaughtExceptionHandler(YourTVExceptionHandler(this))
 
         imageHelper = ImageHelper(this)
+    }
+
+    private fun initX5() {
+        val settings = mutableMapOf<String, Any>(
+            TbsCoreSettings.TBS_SETTINGS_USE_SPEEDY_CLASSLOADER to true,
+            TbsCoreSettings.TBS_SETTINGS_USE_DEXLOADER_SERVICE to true
+        )
+        QbSdk.initTbsSettings(settings)
+        QbSdk.initX5Environment(this, object : QbSdk.PreInitCallback {
+            override fun onCoreInitFinished() {
+                Log.i(TAG, "X5 Core initialized")
+            }
+
+            override fun onViewInitFinished(isX5: Boolean) {
+                Log.i(TAG, "X5 View initialized, isX5=$isX5")
+                isX5Initialized = isX5
+                if (isX5) {
+                    Log.d(TAG, "X5 kernel is available on device, no need to download")
+                } else {
+                    Log.w(TAG, "X5 kernel not available, triggering download")
+                }
+            }
+        })
+    }
+
+    fun isX5Available(): Boolean {
+        return isX5Initialized
     }
 
     fun getDisplayMetrics(): DisplayMetrics {

@@ -1,4 +1,13 @@
 <resources>
+    <string name="press_back_exit">再按一次返回退出</string>
+    <string name="switch_iptv_failed">切換IPTV模式失敗</string>
+    <string name="switch_webview_failed">切換網頁視頻模式失敗</string>
+    <string name="enable_webview_type">網頁視頻模式優先</string>
+    <string name="install_webview_x5">安裝 X5</string>
+    <string name="switch_webview_type">切換到Webview X5</string>
+    <string name="switch_to_iptv">切換到IPTV</string>
+    <string name="switch_to_web_video">切換到網頁視頻</string>
+    <string name="exit_app">退出應用</string>
     <string name="enable_screen_off_audio">熄屏继续播放</string>
     <string name="confirm">確定</string>
     <string name="cancel">取消</string>

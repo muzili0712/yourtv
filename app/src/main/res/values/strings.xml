@@ -1,8 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="UnusedResources">
+    <string name="press_back_exit">Press Back One More Time to Exit</string>
+    <string name="switch_iptv_failed">Failed to Switch IPTV</string>
+    <string name="switch_webview_failed">Failed to Switch Webvideo</string>
+    <string name="enable_webview_type">WebView Mode Firstly</string>
+    <string name="install_webview_x5">Install X5</string>
+    <string name="switch_webview_type">Switch to Webview X5</string>
+    <string name="switch_to_iptv">Switch To IPTV</string>
+    <string name="switch_to_web_video">Switch To Webvideo</string>
+    <string name="exit_app">Exit APP</string>
     <string name="enable_screen_off_audio">enable screen off audio</string>
-    <string name="confirm">確定</string>
-    <string name="cancel">取消</string>
+    <string name="confirm">OK</string>
+    <string name="cancel">CANCEL</string>
     <string name="confirm_reset_settings">确定重置吗？</string>
     <string name="show_source_button">Show source change button</string>
     <string name="auto_update_sources">Automatically update the default/test live source every day</string>

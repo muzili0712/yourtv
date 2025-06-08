@@ -1,6 +1,6 @@
 package com.horsenma.yourtv
 
-import com.horsenma.yourtv.MainViewModel.Companion.CACHE_FILE_NAME
+
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
@@ -57,14 +57,34 @@ class SettingFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        val application = requireActivity().applicationContext as YourTVApplication
-        val context = requireContext()
-        val mainActivity = (activity as MainActivity)
-
         _binding = SettingBinding.inflate(inflater, container, false)
+        return binding.root
+    }
 
+    // 新增：复用触摸屏检测逻辑
+    private fun isTouchScreenDevice(context: Context): Boolean {
+        val packageManager = context.packageManager
+        val uiModeManager = context.getSystemService(Context.UI_MODE_SERVICE) as? android.app.UiModeManager
+        val isTv = uiModeManager?.currentModeType == android.content.res.Configuration.UI_MODE_TYPE_TELEVISION
+        val hasTouchScreen = packageManager.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)
+        return hasTouchScreen && !isTv
+    }
+
+    @SuppressLint("SetTextI18n", "ClickableViewAccessibility")
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        val context = requireActivity()
+        val mainActivity = (activity as MainActivity)
+        val application = context.applicationContext as YourTVApplication
+        val imageHelper = application.imageHelper
+        viewModel = ViewModelProvider(context)[MainViewModel::class.java]
+        binding.switchDisplaySeconds.setOnCheckedChangeListener { _, isChecked ->
+            viewModel.setDisplaySeconds(isChecked)
+        }
+
+        // 初始化控件（保持原有逻辑）
         binding.versionName.text = "v${context.appVersionName}"
-
         binding.version.text = "項目地址：https://github.com/horsemail/yourtv"
         binding.version.isFocusable = true
         binding.version.isFocusableInTouchMode = true
@@ -191,11 +211,20 @@ class SettingFragment : Fragment() {
             mainActivity.settingActive()
         }
 
-        // 设置显示换源按钮开关
-        binding.switchShowSourceButton.isChecked = SP.showSourceButton
+        val switchEnableWebviewType = _binding?.switchEnableWebviewType
+        switchEnableWebviewType?.isChecked = SP.enableWebviewType
+        switchEnableWebviewType?.visibility =  View.VISIBLE
+        switchEnableWebviewType?.setOnCheckedChangeListener { _, isChecked ->
+            SP.enableWebviewType = isChecked
+            (activity as MainActivity).handleWebviewTypeSwitch(isChecked)
+            mainActivity.settingActive()
+        }
+
+        val switchShowSourceButton = _binding?.switchShowSourceButton
+        switchShowSourceButton?.isChecked = SP.showSourceButton
         // 仅在触摸屏设备上显示开关
-        binding.switchShowSourceButton.visibility = if (isTouchScreen) View.VISIBLE else View.GONE
-        binding.switchShowSourceButton.setOnCheckedChangeListener { _, isChecked ->
+        switchShowSourceButton?.visibility = if (isTouchScreen) View.VISIBLE else View.GONE
+        switchShowSourceButton?.setOnCheckedChangeListener { _, isChecked ->
             SP.showSourceButton = isChecked
             mainActivity.settingActive()
             // 通知 PlayerFragment 更新 btn_source 可见性
@@ -224,7 +253,7 @@ class SettingFragment : Fragment() {
                     Toast.makeText(context, R.string.enable_unknown_sources, Toast.LENGTH_SHORT).show()
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to open unknown sources settings: ${e.message}")
-                    Toast.makeText(context, R.string.install_failed, Toast.LENGTH_SHORT).show()
+                    R.string.install_failed.showToast() // 修复
                 }
             } else {
                 try {
@@ -243,7 +272,7 @@ class SettingFragment : Fragment() {
                         data = "package:${context.packageName}".toUri()
                     }
                     startActivityForResult(intent, REQUEST_UNKNOWN_APP_SOURCES)
-                    Toast.makeText(context, R.string.enable_unknown_sources, Toast.LENGTH_SHORT).show()
+                    R.string.install_failed.showToast() // 修复
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to open unknown sources settings: ${e.message}")
                     Toast.makeText(context, R.string.install_failed, Toast.LENGTH_SHORT).show()
@@ -278,14 +307,14 @@ class SettingFragment : Fragment() {
 
         binding.setting.setOnClickListener {
             hideSelf()
+            (activity as? MainActivity)?.settingActive() // 新增
         }
 
         binding.verifyUser.setOnClickListener {
             showVerificationDialog()
         }
 
-        val txtTextSize =
-            application.px2PxFont(binding.versionName.textSize)
+        val txtTextSize = application.px2PxFont(binding.versionName.textSize)
 
         binding.content.layoutParams.width =
             application.px2Px(binding.content.layoutParams.width)
@@ -303,11 +332,9 @@ class SettingFragment : Fragment() {
         layoutParamsVersion.bottomMargin = application.px2Px(binding.version.marginBottom)
         binding.version.layoutParams = layoutParamsVersion
 
-        val btnWidth =
-            application.px2Px(binding.confirmConfig.layoutParams.width)
+        val btnWidth = application.px2Px(binding.confirmConfig.layoutParams.width)
 
-        val btnLayoutParams =
-            binding.verifyUser.layoutParams as ViewGroup.MarginLayoutParams
+        val btnLayoutParams = binding.verifyUser.layoutParams as ViewGroup.MarginLayoutParams
         btnLayoutParams.marginEnd = application.px2Px(binding.verifyUser.marginEnd)
 
         binding.versionName.textSize = txtTextSize
@@ -325,27 +352,11 @@ class SettingFragment : Fragment() {
             i.layoutParams = btnLayoutParams
             i.setOnFocusChangeListener { _, hasFocus ->
                 if (hasFocus) {
-                    i.background = ContextCompat.getColor(
-                        context,
-                        R.color.focus
-                    ).toDrawable()
-                    i.setTextColor(
-                        ContextCompat.getColor(
-                            context,
-                            R.color.white
-                        )
-                    )
+                    i.background = ContextCompat.getColor(context,R.color.focus).toDrawable()
+                    i.setTextColor(ContextCompat.getColor(context,R.color.white))
                 } else {
-                    i.background = ContextCompat.getColor(
-                        context,
-                        R.color.description_blur
-                    ).toDrawable()
-                    i.setTextColor(
-                        ContextCompat.getColor(
-                            context,
-                            R.color.blur
-                        )
-                    )
+                    i.background = ContextCompat.getColor(context,R.color.description_blur                  ).toDrawable()
+                    i.setTextColor(ContextCompat.getColor(context,R.color.blur))
                 }
             }
         }
@@ -358,6 +369,7 @@ class SettingFragment : Fragment() {
             application.px2Px(binding.switchChannelReversal.marginTop)
 
         for (i in listOf(
+            binding.switchEnableWebviewType,
             binding.switchChannelReversal,
             binding.switchChannelNum,
             binding.switchTime,
@@ -403,32 +415,6 @@ class SettingFragment : Fragment() {
         }
         updateManager = UpdateManager(requireActivity(), versionCode)
 
-        return binding.root
-    }
-
-    // 新增：复用触摸屏检测逻辑
-    private fun isTouchScreenDevice(context: Context): Boolean {
-        val packageManager = context.packageManager
-        val uiModeManager = context.getSystemService(Context.UI_MODE_SERVICE) as? android.app.UiModeManager
-        val isTv = uiModeManager?.currentModeType == android.content.res.Configuration.UI_MODE_TYPE_TELEVISION
-        val hasTouchScreen = packageManager.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)
-        return hasTouchScreen && !isTv
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-
-        val context = requireActivity()
-        val mainActivity = (activity as MainActivity)
-        val application = context.applicationContext as YourTVApplication
-        val imageHelper = application.imageHelper
-
-        viewModel = ViewModelProvider(context)[MainViewModel::class.java]
-
-        binding.switchDisplaySeconds.setOnCheckedChangeListener { _, isChecked ->
-            viewModel.setDisplaySeconds(isChecked)
-        }
-
         binding.clear.setOnClickListener {
             // 顯示確認對話框
             val dialog = androidx.appcompat.app.AlertDialog.Builder(requireContext())
@@ -450,6 +436,7 @@ class SettingFragment : Fragment() {
                     SP.autoSwitchSource = SP.DEFAULT_AUTO_SWITCH_SOURCE
                     SP.autoUpdateSources = SP.DEFAULT_AUTO_UPDATE_SOURCES
                     SP.showSourceButton = SP.DEFAULT_SHOW_SOURCE_BUTTON
+                    SP.enableWebviewType = SP.DEFAULT_ENABLE_WEBVIEW_TYPE
                     SP.proxy = SP.DEFAULT_PROXY
                     SP.epg = SP.DEFAULT_EPG
                     SP.deleteLike()
@@ -466,6 +453,7 @@ class SettingFragment : Fragment() {
                 }
                 .setNegativeButton(R.string.cancel) { dialog, _ ->
                     dialog.dismiss()
+                    (activity as? MainActivity)?.settingActive() // 新增
                     Log.d(TAG, "Clear settings cancelled")
                 }
                 .setCancelable(true)
@@ -518,8 +506,8 @@ class SettingFragment : Fragment() {
                 negativeButton?.setTextColor(ContextCompat.getColor(requireContext(), R.color.blur))
                 Log.d(TAG, "Positive button focused: ${positiveButton?.isFocused}")
             }
-
             dialog.show()
+            (activity as? MainActivity)?.settingActive() // 新增
         }
 
         binding.switchShowAllChannels.setOnCheckedChangeListener { _, isChecked ->
@@ -531,19 +519,40 @@ class SettingFragment : Fragment() {
         // 添加按键事件调试
         binding.root.isFocusable = true
         binding.root.isFocusableInTouchMode = true
-        binding.root.setOnKeyListener { _, keyCode, event ->
+
+        // 统一焦点管理
+        view.isFocusable = true
+        view.isFocusableInTouchMode = true
+
+        // 确保 name 可聚焦并添加焦点监听
+        binding.name.isFocusable = true
+        binding.name.isFocusableInTouchMode = true
+        binding.name.setOnFocusChangeListener { _, hasFocus ->
+            binding.name.setTextColor(ContextCompat.getColor(context, if (hasFocus) R.color.focus else R.color.title_blur))
+            Log.d(TAG, "name focus changed: hasFocus=$hasFocus")
+        }
+
+        view.post {
+            binding.remoteSettings.isFocusable = true
+            binding.remoteSettings.isFocusableInTouchMode = true
+            binding.remoteSettings.requestFocus()
+            binding.remoteSettings.onFocusChangeListener?.onFocusChange(binding.remoteSettings, true)
+            Log.d(TAG, "Focus requested on remoteSettings")
+        }
+
+        // 添加触摸监听，重置计时器
+        binding.root.setOnTouchListener { _, _ ->
+            (activity as? MainActivity)?.settingActive()
+            false
+        }
+
+        // 更新按键监听
+        view.setOnKeyListener { _, keyCode, event ->
             if (event.action == KeyEvent.ACTION_DOWN) {
+                (activity as? MainActivity)?.settingActive() // 重置计时器
                 Log.d(TAG, "Key pressed: $keyCode (Left: 21, Right: 22)")
             }
-            false // 让事件继续传递
-        }
-        // 延迟请求焦点，确保视图绘制完成
-        binding.remoteSettings.post {
-            binding.remoteSettings.requestFocus()
-            Log.d(TAG, "Requested focus on remoteSettings, isFocused: ${binding.remoteSettings.isFocused}")
-            if (!binding.remoteSettings.isFocused) {
-                Log.w(TAG, "remoteSettings not focused, current focused view: ${binding.root.findFocus()?.id}")
-            }
+            false
         }
     }
 
@@ -564,27 +573,6 @@ class SettingFragment : Fragment() {
         }
     }
 
-    private fun confirmConfig() {
-        if (SP.configUrl.isNullOrEmpty()) {
-            return
-        }
-
-        uri = Utils.formatUrl(SP.configUrl!!).toUri()
-        if (uri.scheme == "") {
-            uri = uri.buildUpon().scheme("http").build()
-        }
-        if (uri.isAbsolute) {
-            if (uri.scheme == "file") {
-                requestReadPermissions()
-            } else {
-                viewModel.importFromUri(uri)
-            }
-        } else {
-            R.string.invalid_config_address.showToast()
-        }
-        (activity as MainActivity).settingActive()
-    }
-
     private fun confirmChannel() {
         SP.channel =
             min(max(SP.channel, 0), viewModel.groupModel.getAllList()!!.size())
@@ -601,8 +589,14 @@ class SettingFragment : Fragment() {
 
     override fun onHiddenChanged(hidden: Boolean) {
         super.onHiddenChanged(hidden)
-        if (_binding != null && !hidden) {
-            binding.remoteSettings.requestFocus()
+        if (!hidden) {
+            view?.post {
+                binding.remoteSettings.isFocusable = true
+                binding.remoteSettings.isFocusableInTouchMode = true
+                binding.remoteSettings.requestFocus()
+                binding.remoteSettings.onFocusChangeListener?.onFocusChange(binding.remoteSettings, true)
+                Log.d(TAG, "onHiddenChanged: Focus requested on remoteSettings")
+            }
         }
     }
 
@@ -671,6 +665,7 @@ class SettingFragment : Fragment() {
         }
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     private fun showVerificationDialog() {
         val mainActivity = activity as? MainActivity
         val dialog = Dialog(requireContext()).apply {
@@ -684,6 +679,28 @@ class SettingFragment : Fragment() {
             override fun onSkip() {}
             override fun onCompleted() {
                 hideSelf()
+                mainActivity?.settingActive()
+            }
+        }
+
+        dialog.setOnShowListener {
+            dialog.findViewById<View>(R.id.loading)?.setOnTouchListener { _, _ ->
+                mainActivity?.settingActive()
+                false
+            }
+            dialog.findViewById<View>(R.id.confirm_button)?.setOnClickListener {
+                val handler = UserVerificationHandler(mainActivity!!, UserInfoManager, viewModel)
+                val key = handler.getKeyInputText()?.trim() ?: ""
+                if (key.isNotEmpty() && key.matches("[0-9A-Z]{1,20}".toRegex())) {
+                    handler.triggerConfirm(key, dialog, callback)
+                } else {
+                    handler.showErrorText("測試碼格式錯，請重新輸入。")
+                    handler.requestKeyInputFocus()
+                }
+                mainActivity?.settingActive()
+            }
+            dialog.findViewById<View>(R.id.skip_button)?.setOnClickListener {
+                UserVerificationHandler(mainActivity!!, UserInfoManager, viewModel).triggerSkip(dialog, callback)
                 mainActivity?.settingActive()
             }
         }

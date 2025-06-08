@@ -97,51 +97,17 @@ class GroupAdapter(
         }
 
         view.setOnKeyListener { _, keyCode, event: KeyEvent? ->
-            if (event?.action == KeyEvent.ACTION_UP) {
-                recyclerView.postDelayed({
-                    val oldLikeMode = tvGroupModel.isInLikeMode;
-                    tvGroupModel.isInLikeMode = position == 0
-                    if (tvGroupModel.isInLikeMode) {
-//                        R.string.favorite_mode.showToast()
-                    } else if (oldLikeMode) {
-//                        R.string.standard_mode.showToast()
-                    }
-                }, 500)
-            }
             if (event?.action == KeyEvent.ACTION_DOWN) {
-
-                // If it is already the first item and you continue to move up...
-                if (keyCode == KeyEvent.KEYCODE_DPAD_UP && position == 0) {
-                    val p = getItemCount() - 1
-
-                    (recyclerView.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(
-                        p,
-                        0
-                    )
-
-                    recyclerView.postDelayed({
-                        val v = recyclerView.findViewHolderForAdapterPosition(p)
-                        v?.itemView?.isSelected = true
-                        v?.itemView?.requestFocus()
-                    }, 0)
-                }
-
-                // If it is the last item and you continue to move down...
                 if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN && position == getItemCount() - 1) {
                     val p = 0
-
-                    (recyclerView.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(
-                        p,
-                        0
-                    )
-
+                    (recyclerView.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(p, 0)
                     recyclerView.postDelayed({
                         val v = recyclerView.findViewHolderForAdapterPosition(p)
                         v?.itemView?.isSelected = true
                         v?.itemView?.requestFocus()
                     }, 0)
+                    return@setOnKeyListener true
                 }
-
                 return@setOnKeyListener listener?.onKey(keyCode) ?: false
             }
             false
@@ -164,14 +130,11 @@ class GroupAdapter(
 
         fun focus(hasFocus: Boolean) {
             if (hasFocus) {
-                binding.title.setTextColor(ContextCompat.getColor(context, R.color.focus))
+                binding.title.setTextColor(ContextCompat.getColor(context, R.color.white))
+                binding.root.setBackgroundResource(R.color.focus) // 添加焦点背景
             } else {
-                binding.title.setTextColor(
-                    ContextCompat.getColor(
-                        context,
-                        R.color.title_blur
-                    )
-                )
+                binding.title.setTextColor(ContextCompat.getColor(context, R.color.title_blur))
+                binding.root.setBackgroundResource(R.color.transparent) // 设置透明背景
             }
         }
     }

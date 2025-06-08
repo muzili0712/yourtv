@@ -63,7 +63,7 @@ android {
         outputs.all {
             if (this is com.android.build.gradle.internal.api.BaseVariantOutputImpl) {
                 val appName = "yourtv"
-                val newName = "${appName}_v1.6.1.apk"
+                val newName = "${appName}_v1.7.5.apk"
                 outputFileName = newName
             }
         }
@@ -71,7 +71,7 @@ android {
 }
 
 fun getVersionName(): String {
-    return "1.6.1"
+    return "1.7.5"
 }
 
 fun getVersionCode(): Int {
@@ -84,47 +84,35 @@ fun getVersionCode(): Int {
 dependencies {
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 
-    implementation(libs.media3.ui)
-    implementation(libs.media3.exoplayer)
-    implementation(libs.media3.exoplayer.hls)
-    implementation(libs.media3.exoplayer.dash)
-    implementation(libs.media3.exoplayer.rtsp)
+    implementation(libs.activity.ktx)
+    implementation(libs.appcompat.v161)
+    implementation(libs.constraintlayout)
+    implementation(libs.core.ktx.v1160)
+    implementation(libs.coroutines)
+    implementation(libs.exoplayer)
+    implementation(libs.fragment.ktx.v184)
+    implementation(libs.glide)
+    implementation(libs.gson)
+    implementation(libs.kotlin.stdlib)
+    implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.lifecycle.livedata.ktx)
+    implementation(libs.lifecycle.runtime.ktx)
+    implementation(libs.lifecycle.viewmodel.ktx.v290)
+    implementation(libs.lifecycle.viewmodel)
     implementation(libs.media3.datasource.okhttp)
     implementation(libs.media3.datasource.rtmp)
-
+    implementation(libs.media3.exoplayer.dash)
+    implementation(libs.media3.exoplayer.hls)
+    implementation(libs.media3.exoplayer.rtsp)
+    implementation(libs.media3.exoplayer.v111)
+    implementation(libs.media3.exoplayer)
+    implementation(libs.media3.ui.v111)
     implementation(libs.nanohttpd)
-    implementation(libs.zxing)
-    implementation(libs.glide)
-
-    implementation(libs.gson)
     implementation(libs.okhttp)
-
-    implementation(libs.core.ktx)
-    implementation(libs.coroutines)
-
-    implementation(libs.constraintlayout)
-    implementation(libs.appcompat)
     implementation(libs.recyclerview)
-    implementation(libs.lifecycle.viewmodel)
-
-    implementation("androidx.activity:activity-ktx:1.8.2")
-    implementation("androidx.appcompat:appcompat:1.6.1")
-    implementation("androidx.core:core:1.13.0")
-    implementation("androidx.databinding:viewbinding:8.9.1")
-    implementation("androidx.fragment:fragment:1.8.4")
-    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.8.7")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
-    implementation("androidx.media3:media3-exoplayer:1.1.1")
-    implementation("androidx.media3:media3-ui:1.1.1")
-    implementation("com.github.bumptech.glide:glide:4.16.0")
-    implementation("com.google.code.gson:gson:2.11.0")
-    implementation("com.google.zxing:core:3.5.3")
-    implementation("com.google.android.exoplayer:exoplayer:2.18.1")
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("org.jetbrains.kotlin:kotlin-stdlib:2.0.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
-    implementation(files("libs/lib-decoder-ffmpeg-release.aar"))
-    implementation("androidx.security:security-crypto:1.0.0")
+    implementation(libs.security.crypto)
+    implementation(libs.viewbinding)
+    implementation(libs.webkit)
+    implementation(libs.zxing)
+    implementation("com.tencent.tbs:tbssdk:44286")
 }

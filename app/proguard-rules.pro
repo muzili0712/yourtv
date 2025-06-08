@@ -4,7 +4,7 @@
     <init>(...);
 }
 
-# 保留 data class 字段，允许方法混淆
+# 保留 data class 字段和必要方法
 -keepclassmembers class com.horsenma.yourtv.data.** {
     private <fields>;
     public <fields>;
@@ -12,8 +12,19 @@
     *** component*();
     *** copy(...);
 }
--keep,allowobfuscation class com.horsenma.yourtv.data.** {
+-keepclassmembers class com.horsenma.mytv1.data.** {
+    private <fields>;
+    public <fields>;
     <init>(...);
+    *** component*();
+    *** copy(...);
+}
+-keepclassmembers class com.horsenma.mytv1.models.** {
+    private <fields>;
+    public <fields>;
+    <init>(...);
+    *** component*();
+    *** copy(...);
 }
 
 # 保留 decoder，允许混淆
@@ -33,10 +44,12 @@
 -keep class com.horsenma.yourtv.data.Source { <fields>; <init>(...); }
 -keep class com.horsenma.yourtv.data.TV { <fields>; <init>(...); }
 -keep class com.horsenma.yourtv.data.EPG { <fields>; <init>(...); }
+-dontwarn com.google.gson.**
 
 # 日志移除
 -assumenosideeffects class android.util.Log {
     public static boolean isLoggable(java.lang.String, int);
+    public static int v(...);
     public static int d(...);
     public static int i(...);
     public static int w(...);
@@ -55,4 +68,21 @@
 -keep class fi.iki.elonen.** { *; }
 -keep class kotlin.coroutines.** { *; }
 -keep class kotlinx.coroutines.** { *; }
--keep class com.horsenma.yourtv.databinding.** { *; }
+-keep class com.horsenma.yourtv.databinding.*Binding { *; }
+-keepclassmembers class com.horsenma.yourtv.databinding.*Binding {
+    public <methods>;
+    <init>(...);
+}
+
+# X5 WebView
+-keep class com.tencent.smtt.** { *; }
+-dontwarn com.tencent.smtt.**
+
+# ViewModelUtils
+-keep class com.horsenma.yourtv.Utils.ViewModelUtils {
+    public static <methods>;
+    <init>(...);
+}
+
+# mytv1 MainActivity
+-keep class com.horsenma.mytv1.MainActivity { *; }

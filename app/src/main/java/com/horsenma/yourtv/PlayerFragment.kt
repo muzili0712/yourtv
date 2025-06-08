@@ -710,6 +710,7 @@ class PlayerFragment : Fragment() {
 
     @OptIn(UnstableApi::class)
     fun play(tvModel: TVModel) {
+        binding.webView.visibility = View.GONE
         this.tvModel = tvModel
         Log.d(TAG, "Playing tvModel: ${tvModel.tv.title}, uris: ${tvModel.tv.uris.size}")
 

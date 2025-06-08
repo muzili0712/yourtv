@@ -178,9 +178,16 @@ object DownGithubPrivate {
                         connection.connectTimeout = 10000
                         connection.readTimeout = 10000
                         if (connection.responseCode == HttpsURLConnection.HTTP_OK) {
-                            connection.inputStream.bufferedReader().use { it.readText() }
-                                .trim()
-                                .replace(Regex("[\\r\\n\\s]+"), "")
+                            val rawContent = connection.inputStream.bufferedReader().use { it.readText() }
+                            // 判断是否为 HEX 文件
+                            val isHex = rawContent.trim().matches(Regex("^[0-9a-fA-F]+$"))
+                            if (isHex) {
+                                // HEX 文件：移除换行符和空白
+                                rawContent.trim().replace(Regex("[\\r\\n\\s]+"), "")
+                            } else {
+                                // 明文文件：保留原始内容
+                                rawContent
+                            }
                         } else {
                             throw IOException("HTTP ${connection.responseCode}")
                         }
@@ -234,9 +241,17 @@ object DownGithubPrivate {
                     connection.setRequestProperty("Accept", "text/plain")
                     connection.connectTimeout = 10000
                     connection.readTimeout = 10000
-                    val content = connection.inputStream.bufferedReader().use { it.readText() }
-                        .trim()
-                        .replace(Regex("[\\r\\n\\s]+"), "")
+                    val content = connection.inputStream.bufferedReader().use { it.readText() }.let { rawContent ->
+                        // 判断是否为 HEX 文件
+                        val isHex = rawContent.trim().matches(Regex("^[0-9a-fA-F]+$"))
+                        if (isHex) {
+                            // HEX 文件：移除换行符和空白
+                            rawContent.trim().replace(Regex("[\\r\\n\\s]+"), "")
+                        } else {
+                            // 明文文件：保留原始内容
+                            rawContent
+                        }
+                    }
                     if (content.isEmpty()) {
                         return@withContext Result.failure(IOException("Downloaded content is empty"))
                     }

@@ -199,11 +199,11 @@ class MainViewModel : ViewModel() {
                     Log.i(TAG, "Playing latest stable channel immediately: ${defaultChannel.tv.title}, url: ${defaultChannel.getVideoUrl()}")
                 } else {
                     Log.w(TAG, "Selected stable source is null")
-                    R.string.channel_read_error.showToast()
+                    // R.string.channel_read_error.showToast()
                 }
             } else {
                 Log.w(TAG, "No stable sources available")
-                R.string.channel_read_error.showToast()
+                // R.string.channel_read_error.showToast()
             }
 
             // 同步设置 groupModel.current
@@ -249,23 +249,42 @@ class MainViewModel : ViewModel() {
                     }
                     if (cacheChannels.isNotEmpty()) {
                         tryStr2Channels(cacheChannels, null, "", "")
-                        Log.d(TAG, "Channels loaded from /raw/channels.txt")
+                        Log.d(TAG, "Channels loaded from /raw/codechannels.txt")
                         channelsLoaded = true
                     }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Failed to load /raw/channels.txt: ${e.message}", e)
+                    Log.e(TAG, "Failed to load /raw/codechannels.txt: ${e.message}", e)
+                }
+            }
+
+            if (channelsLoaded && stableSources.isEmpty() && defaultChannel == null) {
+                val firstChannel = listModel.firstOrNull()
+                if (firstChannel != null) {
+                    groupModel.setCurrent(firstChannel)
+                    triggerPlay(firstChannel)
+                    Log.i(TAG, "Playing default channel from cache/raw: ${firstChannel.tv.title}, url=${firstChannel.getVideoUrl()}")
+                } else {
+                    Log.w(TAG, "No channels available in listModel after loading")
                 }
             }
 
             initialized = true
-            _channelsOk.value = channelsLoaded // Notify UI (e.g., MenuFragment) to update channel list
+            _channelsOk.value = channelsLoaded
 
-            // Step 3: Start delayed download after 30 seconds, update list without interrupting playback
-            val delayMinutes = 30_000L
-            if ((SP.autoUpdateSources) || ((SP.getStableSources()).isEmpty()) || !cacheFile!!.exists() || cacheFile == null ) {
-                viewModelScope.launch {
-                    delay(delayMinutes)
-                    startDelayedDownload(context)
+            val delayMillis = 3_000L
+            var hasScheduledDownload = false
+            channelsOk.observeForever { isInitialized ->
+                if (isInitialized && !hasScheduledDownload) {
+                    Log.d(TAG, "channelsOk: Initialized, scheduling delayed download")
+                    if (SP.autoUpdateSources || SP.getStableSources().isEmpty() || cacheFile?.exists() != true) {
+                        hasScheduledDownload = true
+                        viewModelScope.launch {
+                            Log.d(TAG, "Scheduling delayed download after ${delayMillis}ms")
+                            delay(delayMillis)
+                            Log.d(TAG, "Starting delayed download")
+                            startDelayedDownload(context)
+                        }
+                    }
                 }
             }
         }
@@ -544,27 +563,84 @@ class MainViewModel : ViewModel() {
     }
 
     suspend fun importFromUrl(url: String, id: String = "", skipHistory: Boolean = false) {
-        Log.d(TAG, "importFromUrl: Downloading from url=$url, skipHistory=$skipHistory")
+        Log.d(TAG, "importFromUrl: url=$url, id=$id, skipHistory=$skipHistory")
+        if (url.isBlank()) {
+            Log.w(TAG, "importFromUrl: Skipping empty URL")
+            R.string.sources_download_error.showToast()
+            return
+        }
+
+        //val filename = if (id.isNotBlank()) id else url.substringAfterLast("/").takeIf { it.isNotBlank() } ?: "source_${url.hashCode()}.txt"
+        val rawFilename = url.substringAfterLast("/").takeIf { it.isNotBlank() }?.substringBeforeLast(".") ?: "source_${url.hashCode()}"
+        val filename = "$rawFilename.txt"
+        val prefs = context.getSharedPreferences("SourceCache", Context.MODE_PRIVATE)
+        val cacheKey = "cache_$filename"
+        val cacheTimeKey = "cache_time_$filename"
+        val urlKey = "url_$filename"
+        val cachedContent = prefs.getString(cacheKey, null)
+        val cacheTime = prefs.getLong(cacheTimeKey, 0)
+        val cacheDuration = 24 * 60 * 60 * 1000
+        val cacheCodeFile = File(appDirectory, "cache_$filename")
+        val cacheUseFile = File(appDirectory, CACHE_CODE_FILE)
+
+        // 检查缓存
+        if (cachedContent != null && System.currentTimeMillis() - cacheTime < cacheDuration && cacheCodeFile.exists()) {
+            Log.d(TAG, "importFromUrl: Using cached content for filename=$filename, cacheTime=$cacheTime")
+            withContext(Dispatchers.IO) {
+                cacheCodeFile.writeText(cachedContent)
+            }
+            withContext(Dispatchers.Main) {
+                val isHex = cachedContent.trim().matches(Regex("^[0-9a-fA-F]+$"))
+                val contentToParse = if (isHex) SourceDecoder.decodeHexSource(cachedContent) ?: cachedContent else cachedContent
+                tryStr2Channels(contentToParse, cacheCodeFile, if (skipHistory) "" else url, id)
+                _channelsOk.value = true
+                prefs.edit().putString("active_source", filename).apply()
+            }
+            return
+        }
+
+        // 下载
+        Log.d(TAG, "importFromUrl: Download filename=$filename")
+        Log.d(TAG, "importFromUrl: Download url=$url")
         val result = withContext(Dispatchers.IO) {
             DownGithubPrivate.download(context, url, id)
         }
-        Log.d(TAG, "importFromUrl: Downloaded content=${result.getOrNull()?.take(100)}")
         when {
             result.isSuccess -> {
                 val content = result.getOrNull() ?: ""
                 if (content.isEmpty()) {
-                    Log.w(TAG, "importFromUrl: Downloaded content is empty for url=$url")
+                    Log.w(TAG, "importFromUrl: Downloaded empty content for url=$url")
                     R.string.sources_download_error.showToast()
                     return
                 }
-                val cacheCodeFile = File(appDirectory, CACHE_CODE_FILE)
-                val cacheFile = File(appDirectory, CACHE_FILE_NAME)
+                val isHex = content.trim().matches(Regex("^[0-9a-fA-F]+$"))
+                val normalizedContent = if (isHex) {
+                    SourceDecoder.decodeHexSource(content) ?: content
+                } else {
+                    content.replace("\r\n", "\n").replace("\r", "\n")
+                }
+                val contentToCache = if (isHex) content else SourceEncoder.encodeJsonSource(normalizedContent)
+                withContext(Dispatchers.IO) {
+                    try {
+                        cacheCodeFile.writeText(contentToCache)
+                        cacheUseFile.writeText(contentToCache)
+                        Log.d(TAG, "importFromUrl: Wrote cache_$filename for filename=$filename, content length=${contentToCache.length}")
+                    } catch (e: Exception) {
+                        Log.e(TAG, "importFromUrl: Failed to write cache_$filename: ${e.message}")
+                    }
+                }
                 withContext(Dispatchers.Main) {
-                    // 根据 skipHistory 选择 targetFile
-                    val targetFile = if (skipHistory) cacheCodeFile else cacheFile
-                    tryStr2Channels(content, targetFile, if (skipHistory) "" else url, id)
+                    tryStr2Channels(normalizedContent, cacheCodeFile, if (skipHistory) "" else url, id)
                     SP.lastDownloadTime = System.currentTimeMillis()
-                    Log.d(TAG, "importFromUrl: Processed content for url=$url, targetFile=${targetFile.name}")
+                    with(prefs.edit()) {
+                        putString(cacheKey, contentToCache)
+                        putLong(cacheTimeKey, System.currentTimeMillis())
+                        putString(urlKey, url)
+                        putString("active_source", filename)
+                        apply()
+                    }
+                    Log.d(TAG, "importFromUrl: Cached content for filename=$filename, isHex=$isHex")
+                    _channelsOk.value = true
                 }
             }
             result.isFailure -> {
@@ -575,20 +651,29 @@ class MainViewModel : ViewModel() {
     }
 
     fun reset(context: Context) {
+        val filename = "default_channels.txt"
+        val defaultUrl = "default://channels"
+        val prefs = context.getSharedPreferences("SourceCache", Context.MODE_PRIVATE)
+
         val str = try {
-            // 直接读取 DEFAULT_CHANNELS_FILE
-            context.resources.openRawResource(DEFAULT_CHANNELS_FILE)
-                .bufferedReader().use { it.readText() }
+            context.resources.openRawResource(R.raw.channels).bufferedReader().use { it.readText() }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to read $DEFAULT_CHANNELS_FILE: ${e.message}")
+            Log.e(TAG, "reset: Failed to read R.raw.channels: ${e.message}")
             R.string.channel_read_error.showToast()
-            return // 如果读取失败，直接返回
+            return
         }
 
         try {
+            with(prefs.edit()) {
+                putString("active_source", filename)
+                putString("url_$filename", defaultUrl)
+                apply()
+            }
             str2Channels(str)
+            Log.d(TAG, "reset: Processed default channels from R.raw.channels")
+            _channelsOk.value = true
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "reset: Failed to process default channels: ${e.message}")
             R.string.channel_read_error.showToast()
         }
     }
@@ -618,13 +703,18 @@ class MainViewModel : ViewModel() {
 
     fun tryStr2Channels(str: String, file: File?, url: String, id: String = "") {
         try {
+            if (str.isEmpty()) {
+                Log.w(TAG, "Input string is empty for url=$url")
+                R.string.channel_import_error.showToast()
+                return
+            }
+            val isPlainText = str.trim().startsWith("#EXTM3U") ||
+                    str.trim().startsWith("http://") ||
+                    str.trim().startsWith("https://")
+            val isHex = str.trim().matches(Regex("^[0-9a-fA-F]+$"))
+            val targetFile = file ?: cacheFile
+            Log.d(TAG, "tryStr2Channels: Input str length=${str.length}, isPlainText=$isPlainText, isHex=$isHex, url=$url")
             if (str2Channels(str)) {
-                val isPlainText = str.trim().startsWith("#EXTM3U") ||
-                        str.trim().startsWith("http://") ||
-                        str.trim().startsWith("https://")
-                val isHex = str.trim().matches(Regex("^[0-9a-fA-F]+$"))
-                val targetFile = file ?: cacheFile // 默认写入 cacheFile
-
                 if (isPlainText) {
                     val encryptedStr = SourceEncoder.encodeJsonSource(str)
                     if (targetFile != null) {
@@ -638,7 +728,6 @@ class MainViewModel : ViewModel() {
                     val decryptedStr = SourceDecoder.decodeHexSource(str) ?: str
                     cacheChannels = decryptedStr
                 } else {
-                    // 非明文非 HEX，尝试解码后保存
                     try {
                         val decodedStr = SourceDecoder.decodeHexSource(str) ?: str
                         val encryptedStr = SourceEncoder.encodeJsonSource(decodedStr)
@@ -651,7 +740,6 @@ class MainViewModel : ViewModel() {
                         cacheChannels = str
                     }
                 }
-
                 if (url.isNotEmpty()) {
                     SP.configUrl = url
                     val source = Source(id = id, uri = url)
@@ -660,11 +748,12 @@ class MainViewModel : ViewModel() {
                 }
                 viewModelScope.launch {
                     withContext(Dispatchers.Main) {
-                        _channelsOk.value = true // Notify UI to update
+                        _channelsOk.value = true
                     }
                 }
                 R.string.channel_import_success.showToast()
             } else {
+                Log.w(TAG, "str2Channels failed for url=$url")
                 R.string.channel_import_error.showToast()
             }
         } catch (e: Exception) {
@@ -679,44 +768,66 @@ class MainViewModel : ViewModel() {
             return true
         }
 
+        if (str.isEmpty()) {
+            Log.w(TAG, "Input string is empty")
+            return false
+        }
+
         var string = str
+        val isPlainText = str.trim().startsWith("#EXTM3U") ||
+                str.trim().startsWith("http://") ||
+                str.trim().startsWith("https://")
+        val isHex = str.trim().matches(Regex("^[0-9a-fA-F]+$"))
+
+        Log.d(TAG, "str2Channels: isPlainText=$isPlainText, isHex=$isHex, str length=${str.length}, sample=${str.take(50)}")
+
         try {
-            val decoded = SourceDecoder.decodeHexSource(str)
-            if (decoded != null) string = decoded
+            if (isHex) {
+                val decoded = SourceDecoder.decodeHexSource(str)
+                if (decoded != null) {
+                    string = decoded
+                    Log.d(TAG, "str2Channels: Decoded HEX, new string length=${string.length}, sample=${string.take(50)}")
+                } else {
+                    Log.w(TAG, "str2Channels: Failed to decode HEX, using original string")
+                }
+            } else if (isPlainText) {
+                string = str
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to decode string: ${e.message}")
         }
 
         if (string.isEmpty()) {
-            Log.w(TAG, "channels is empty")
+            Log.w(TAG, "channels is empty after processing")
             return false
         }
 
-        // 保存当前播放的 TVModel
         val currentTvTitle = groupModel.getCurrent()?.tv?.title
         Log.d(TAG, "str2Channels: Saving currentTvTitle=$currentTvTitle")
 
-        // Check if a stable source is playing
         val isStableSourcePlaying = SP.getStableSources().isNotEmpty() && groupModel.current.value != null
 
         val list: List<TV> = when (string[0]) {
             '[' -> {
                 try {
-                    gson.fromJson(string, typeTvList)
+                    gson.fromJson(string, typeTvList) ?: emptyList()
                 } catch (e: Exception) {
-                    Log.e(TAG, "str2Channels JSON parsing failed", e)
+                    Log.e(TAG, "str2Channels JSON parsing failed: ${e.message}")
                     return false
                 }
             }
             '#' -> {
-                val lines = string.lines()
-                val tvList = mutableListOf<TV>()
-                var currentTV = TV()
+                // 尝试多种分行方式
+                val lines = string.split("\n", "\r\n", "\r").filter { it.isNotBlank() }
+                Log.d(TAG, "str2Channels: Parsing M3U, line count=${lines.size}, first lines=${lines.take(5).joinToString("|")}")
                 val tvMap = mutableMapOf<String, MutableList<TV>>()
+                var currentTV: TV? = null
 
                 for (line in lines) {
                     val trimmedLine = line.trim()
                     if (trimmedLine.isEmpty()) continue
+
+                    // Log.d(TAG, "str2Channels: Processing line: ${trimmedLine.take(500)}")
 
                     if (trimmedLine.startsWith("#EXTM3U")) {
                         val epgIndex = trimmedLine.indexOf("x-tvg-url=\"")
@@ -725,12 +836,17 @@ class MainViewModel : ViewModel() {
                             if (endIndex != -1) epgUrl = trimmedLine.substring(epgIndex + 11, endIndex)
                         }
                     } else if (trimmedLine.startsWith("#EXTINF")) {
-                        val key = currentTV.group + currentTV.name
-                        if (key.isNotEmpty()) {
+                        if (currentTV != null && currentTV.uris.isNotEmpty()) {
+                            val key = (currentTV.group + currentTV.name).ifEmpty { currentTV.title }
                             tvMap.computeIfAbsent(key) { mutableListOf() }.add(currentTV)
                         }
                         currentTV = TV()
                         val info = trimmedLine.split(",", limit = 2)
+                        if (info.size < 2) {
+                            Log.w(TAG, "str2Channels: Invalid #EXTINF line: $trimmedLine")
+                            currentTV = null
+                            continue
+                        }
                         currentTV = currentTV.copy(title = info.last().trim())
 
                         val extinf = info.first()
@@ -774,28 +890,30 @@ class MainViewModel : ViewModel() {
                             }
                         )
                     } else if (trimmedLine.startsWith("#EXTVLCOPT:http-")) {
-                        val keyValue = trimmedLine.substringAfter("#EXTVLCOPT:http-").split("=", limit = 2)
-                        if (keyValue.size == 2) {
-                            currentTV = currentTV.copy(
-                                headers = (currentTV.headers ?: emptyMap()).toMutableMap().apply {
-                                    this[keyValue[0]] = keyValue[1]
-                                }
-                            )
+                        if (currentTV != null) {
+                            val keyValue = trimmedLine.substringAfter("#EXTVLCOPT:http-").split("=", limit = 2)
+                            if (keyValue.size == 2) {
+                                currentTV = currentTV.copy(
+                                    headers = (currentTV.headers ?: emptyMap()).toMutableMap().apply {
+                                        this[keyValue[0]] = keyValue[1]
+                                    }
+                                )
+                            }
                         }
-                    } else if (!trimmedLine.startsWith("#")) {
+                    } else if (!trimmedLine.startsWith("#") && currentTV != null) {
                         currentTV = currentTV.copy(
                             uris = currentTV.uris.toMutableList().apply { add(trimmedLine) }
                         )
                     }
                 }
 
-                val key = currentTV.group + currentTV.name
-                if (key.isNotEmpty()) {
+                if (currentTV != null && currentTV.uris.isNotEmpty()) {
+                    val key = (currentTV.group + currentTV.name).ifEmpty { currentTV.title }
                     tvMap.computeIfAbsent(key) { mutableListOf() }.add(currentTV)
                 }
 
-                tvMap.values.map { tvs ->
-                    val uris = tvs.flatMap { it.uris }
+                val tvList = tvMap.values.map { tvs ->
+                    val uris = tvs.flatMap { it.uris }.distinct()
                     TV(
                         id = -1,
                         name = tvs[0].name,
@@ -811,10 +929,13 @@ class MainViewModel : ViewModel() {
                         number = tvs[0].number,
                         child = emptyList()
                     )
-                }
+                }.filter { it.uris.isNotEmpty() }
+                Log.d(TAG, "str2Channels: Generated TV list size=${tvList.size}")
+                tvList
             }
             else -> {
-                val lines = string.lines()
+                val lines = string.split("\n", "\r\n", "\r").filter { it.isNotBlank() }
+                Log.d(TAG, "str2Channels: Parsing other format, line count=${lines.size}")
                 val tvMap = mutableMapOf<String, TV>()
                 var group = ""
 
@@ -848,17 +969,23 @@ class MainViewModel : ViewModel() {
                         }
                     }
                 }
-                tvMap.values.toList()
+                val tvList = tvMap.values.toList()
+                Log.d(TAG, "str2Channels: Generated TV list size=${tvList.size}")
+                tvList
             }
         }
 
-        // Only reset tvGroupValue if no stable source is playing
-        if (!isStableSourcePlaying) {
+        if (list.isEmpty()) {
+            Log.w(TAG, "str2Channels: Parsed TV list is empty")
+            return false
+        }
+
+        //if (!isStableSourcePlaying) {
             groupModel.setTVListModelList(listOf(
                 TVListModel("我的收藏", 0),
                 TVListModel("全部頻道", 1)
             ))
-        }
+        //}
 
         groupModel.tvGroupValue.forEach { it.initTVList() }
 
@@ -869,11 +996,10 @@ class MainViewModel : ViewModel() {
             val tvModel = TVModel(tv).apply {
                 tv.id = id
                 setLike(SP.getLike(id))
-                setGroupIndex(2) // 假设新分组从 2 开始
+                setGroupIndex(2)
                 listIndex = listModelNew.size
             }
             listModelNew.add(tvModel)
-            // 修复 tvGroupValue 访问和 addTVModel
             val existingGroup = groupModel.tvGroupValue.find { model -> model.getName() == group }
             if (existingGroup != null) {
                 existingGroup.addTVModel(tvModel)
@@ -888,7 +1014,6 @@ class MainViewModel : ViewModel() {
         listModel = listModelNew
         groupModel.tvGroupValue[1].setTVListModel(listModel)
 
-        // 恢复当前播放的 TVModel
         if (currentTvTitle != null) {
             val matchingTvModel = listModelNew.firstOrNull { it.tv.title == currentTvTitle }
             if (matchingTvModel != null) {
@@ -902,22 +1027,33 @@ class MainViewModel : ViewModel() {
         try {
             val encodedString = SourceEncoder.encodeJsonSource(string)
             if (string != cacheChannels && encodedString != cacheChannels) {
-                // 移除 initPosition，防止重置位置导致 UI 自动切换频道
-                // groupModel.initPosition()
+                // Remove initPosition
             }
         } catch (e: Exception) {
             Log.e(TAG, "加密字符串失敗: ${e.message}")
-            // groupModel.initPosition()
         }
 
         groupModel.setChange()
         viewModelScope.launch(Dispatchers.IO) { preloadLogo() }
+        Log.d(TAG, "str2Channels: Updated listModel size=${listModel.size}")
+
+        // 新增：确保 groupModel.current 非空，恢复旧代码的隐式播放
+        if (groupModel.getCurrent() == null && listModel.isNotEmpty()) {
+            groupModel.setCurrent(listModel[0])
+            Log.d(TAG, "str2Channels: Set default groupModel.current to: ${listModel[0].tv.title}")
+        }
+
         return true
+    }
+
+    fun clearCacheChannels() {
+        cacheChannels = ""
+        Log.d(TAG, "clearCacheChannels: Cache cleared")
     }
 
     companion object {
         private const val TAG = "MainViewModel"
-        const val CACHE_FILE_NAME = "channels.txt"
+        const val CACHE_FILE_NAME = "codechannels.txt"
         const val CACHE_CODE_FILE = "cacheCode.txt"
         const val CACHE_EPG = "epg.xml"
         val DEFAULT_CHANNELS_FILE = R.raw.channels

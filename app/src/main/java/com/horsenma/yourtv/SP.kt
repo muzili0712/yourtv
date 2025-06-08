@@ -4,8 +4,6 @@ package com.horsenma.yourtv
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
-import com.horsenma.yourtv.data.Global.gson
-import com.horsenma.yourtv.data.Global.typeSourceList
 import com.horsenma.yourtv.data.Source
 import com.horsenma.yourtv.data.Global
 import com.horsenma.yourtv.data.StableSource
@@ -41,7 +39,9 @@ object SP {
     private const val KEY_AUTO_UPDATE_SOURCES = "auto_update_sources"
     private const val KEY_SHOW_SOURCE_BUTTON = "show_source_button"
     private const val KEY_ENABLE_SCREEN_OFF_AUDIO = "enable_screen_off_audio"
+    private const val KEY_ENABLE_WEBVIEW_TYPE = "enable_webview_type"
 
+    const val DEFAULT_ENABLE_WEBVIEW_TYPE = false
     const val DEFAULT_ENABLE_SCREEN_OFF_AUDIO = true
     const val DEFAULT_SHOW_SOURCE_BUTTON = false
     const val DEFAULT_AUTO_UPDATE_SOURCES = false
@@ -269,6 +269,10 @@ object SP {
     var showSourceButton: Boolean
         get() = sp.getBoolean(KEY_SHOW_SOURCE_BUTTON, DEFAULT_SHOW_SOURCE_BUTTON)
         set(value) = sp.edit() { putBoolean(KEY_SHOW_SOURCE_BUTTON, value) }
+
+    var enableWebviewType: Boolean
+        get() = sp.getBoolean(KEY_ENABLE_WEBVIEW_TYPE, DEFAULT_ENABLE_WEBVIEW_TYPE)
+        set(value) = sp.edit() { putBoolean(KEY_ENABLE_WEBVIEW_TYPE, value) }
 
     fun getStableSources(): List<StableSource> {
         val json = stableSources ?: return emptyList()
