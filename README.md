@@ -7,8 +7,7 @@
 IPTV/網頁視頻播放安卓APK軟件，支持腾讯webview x5，内置数千直播源，可自定義源，IPTV支持畫中畫和熄屏播放。
 [yourtv](https://github.com/horsemail/yourtv)
 <br>
-僅供測試，嚴禁傳播。<br>
-測試完，請及時刪除。<br>
+僅供測試，測試完，請及時刪除。<br>
 ### 🔴 **請仔細閱讀後面的[使用說明](#使用)。**
 ## 在線加密解密：（兼容Tvbox的接口源加密解密）
 https://yourtvcrypto.horsenma.net<br>
