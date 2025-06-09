@@ -26,6 +26,9 @@ https://t.me/yourtvapp<br>
 <img src="./530.jpg" alt="image"/><br><br>
 <img src="./531.jpg" alt="image"/><br><br>
 ## Update History<br>
+### Updated on June 9, 2025<br>
+Optimized channel parsing logic<br>
+Greatly reduced the time to load live source files<br>
 ### Updated on June 7, 2025<br>
 Added live source file caching and switching functions<br>
 The first line of the Menu shows the live source file switching<br>
