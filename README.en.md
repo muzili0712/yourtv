@@ -27,8 +27,12 @@ https://t.me/yourtvapp<br>
 <img src="./531.jpg" alt="image"/><br><br>
 ## Update History<br>
 ### Updated on June 9, 2025<br>
+Released version 1.7.6<br>
+Added automatic version detection<br>
+Fixed live source file switching bug<br>
+Fixed version number calculation<br>
 Optimized channel parsing logic<br>
-Greatly reduced the time to load live source files<br>
+Significantly reduced the time to load live source files<br>
 ### Updated on June 7, 2025<br>
 Added live source file caching and switching functions<br>
 The first line of the Menu shows the live source file switching<br>
