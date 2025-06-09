@@ -26,6 +26,9 @@ https://t.me/yourtvapp<br><br>
 <img src="./530.jpg" alt="image"/><br><br>
 <img src="./531.jpg" alt="image"/><br>
 ## 更新歷史
+###  2025年6月9日更新<br>
+优化频道解析逻辑<br>
+大幅减少加载直播源文件时间<br>
 ###  2025年6月7日更新<br>
 增加直播源文件緩存和切換功能<br>
 Menu菜單第一行顯示直播源文件切換<br>
