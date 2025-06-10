@@ -19,7 +19,7 @@ For mobile phones, it is best to enter the settings interface to switch to soft 
 ### 🔴 **If you need a test code, please join the TG group, the group will open the test code/or automatically issue/or apply for it. **<br>
 ## Telegram Group
 https://t.me/yourtvapp<br>
-<img src="./tgyourtv.jpg" alt="image" width="200"/><br><br>
+<img src="./appreciate.png" alt="image" width="200"/><br><br>
 <img src="./527.jpg" alt="image"/><br><br>
 <img src="./528.jpg" alt="image"/><br><br>
 <img src="./529.jpg" alt="image"/><br><br>
