@@ -26,7 +26,7 @@ https://t.me/yourtvapp<br><br>
 <img src="./530.jpg" alt="image"/><br><br>
 <img src="./531.jpg" alt="image"/><br>
 ## 更新歷史
-###  2025年6月9日更新<br>
+###  2025年6月11日更新<br>
 發布1.7.7版本<br>
 修複部分頻道手機播放無聲音/軟解碼開關無效<br>
 有效測試碼下載直播源每次輸入都直接更新<br>
