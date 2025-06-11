@@ -26,6 +26,12 @@ https://t.me/yourtvapp<br>
 <img src="./530.jpg" alt="image"/><br><br>
 <img src="./531.jpg" alt="image"/><br><br>
 ## Update History<br>
+### Updated on June 11, 2025<br>
+Released version 1.7.7<br>
+Fixed the issue of no sound when playing on mobile phones of some channels/invalid soft decoding switch<br>
+Each time the valid test code is downloaded, the live source is directly updated<br>
+(The original logic uses the cache within 24 hours without downloading)<br>
+The test code can only be entered once within 10 minutes<br>
 ### Updated on June 9, 2025<br>
 Released version 1.7.6<br>
 Added automatic version detection<br>
