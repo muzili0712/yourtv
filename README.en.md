@@ -4,7 +4,8 @@
 - [🇺🇸 English Version](README.en.md)
 # Your TV：Android Live TV APK
 
-IPTV/web video player android APK software, with thousands of built-in live sources, customizable sources, IPTV supports picture-in-picture and off-screen playback.
+IPTV/web video player android APK software, with thousands of built-in live sources, customizable sources(
+(Supports webview:// format web video source)), IPTV supports picture-in-picture and off-screen playback.
 [yourtv](https://github.com/horsemail/yourtv)
 <br>
 For testing only. After testing, please delete in time. <br>
