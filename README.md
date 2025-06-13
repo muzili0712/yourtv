@@ -26,6 +26,9 @@ https://t.me/yourtvapp<br><br>
 <img src="./530.jpg" alt="image"/><br><br>
 <img src="./531.jpg" alt="image"/><br>
 ## 更新歷史
+###  2025年6月13日更新<br>
+支持直播源文件中包含webview和IPTV混合源<br>
+webview:// https://xxx类似的源和https://abc.com/cctv1.m3u8混合源<br>
 ###  2025年6月11日更新<br>
 發布1.7.7版本<br>
 修複部分頻道手機播放無聲音/軟解碼開關無效<br>
