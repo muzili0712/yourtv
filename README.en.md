@@ -26,6 +26,9 @@ https://t.me/yourtvapp<br>
 <img src="./530.jpg" alt="image"/><br><br>
 <img src="./531.jpg" alt="image"/><br><br>
 ## Update History<br>
+### 2025 年 6 月 13 日更新<br>
+支持包含webview和IPTV混合源的直播源文件<br>
+webview:// https://xxx 及类似源和 https://abc.com/cctv1.m3u8 混合源<br>
 ### Updated on June 11, 2025<br>
 Released version 1.7.7<br>
 Fixed the issue of no sound when playing on mobile phones of some channels/invalid soft decoding switch<br>
