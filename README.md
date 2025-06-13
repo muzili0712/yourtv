@@ -4,7 +4,7 @@
 - [🇺🇸 English Version](README.en.md)
 # 你的電視：安卓電視直播APK
 
-IPTV/網頁視頻播放安卓APK軟件，支持腾讯webview x5，内置数千直播源，可自定義源，IPTV支持畫中畫和熄屏播放。
+IPTV/網頁視頻播放安卓APK軟件，支持腾讯webview x5，内置数千直播源，可自定義源(支持webview://格式網頁視頻源)，IPTV支持畫中畫和熄屏播放。
 [yourtv](https://github.com/horsemail/yourtv)
 <br>
 僅供測試，測試完，請及時刪除。<br>
