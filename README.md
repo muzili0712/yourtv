@@ -28,6 +28,7 @@ https://t.me/yourtvapp<br><br>
 ## 更新歷史
 ###  2025年6月15日更新<br>
 IPTV可加載默認的WEBVIEW源。<br>
+修復多語言支持。<br>
 各種優化和BUG修複。<br>
 ###  2025年6月13日更新<br>
 支持直播源文件中包含webview和IPTV混合源<br>
