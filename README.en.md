@@ -28,8 +28,9 @@ https://t.me/yourtvapp<br>
 <img src="./531.jpg" alt="image"/><br><br>
 ## Update History<br>
 ### Updated on June 15, 2025<br>
-IPTV can load the default WEBVIEW source. <br>
-Various optimizations and bug fixes. <br>
+IPTV can load the default WEBVIEW source.<br>
+Fixed multi-language support.<br>
+Various optimizations and bug fixes.<br>
 ### 2025 年 6 月 13 日更新<br>
 支持包含webview和IPTV混合源的直播源文件<br>
 webview:// https://xxx 及类似源和 https://abc.com/cctv1.m3u8 混合源<br>
