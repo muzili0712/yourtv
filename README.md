@@ -26,6 +26,10 @@ https://t.me/yourtvapp<br><br>
 <img src="./530.jpg" alt="image"/><br><br>
 <img src="./531.jpg" alt="image"/><br>
 ## 更新歷史
+###  2025年6月17日更新<br>
+V1.8.2版本髮佈
+增加全屏拉伸顯示模式<br>
+修複其它BUG<br>
 ###  2025年6月15日更新<br>
 IPTV可加載默認的WEBVIEW源。<br>
 修復多語言支持。<br>
