@@ -27,6 +27,10 @@ https://t.me/yourtvapp<br>
 <img src="./530.jpg" alt="image"/><br><br>
 <img src="./531.jpg" alt="image"/><br><br>
 ## Update History<br>
+### Updated on June 17, 2025<br>
+Released V1.8.2
+Added full screen stretch display mode<br>
+Fixed other bugs<br>
 ### Updated on June 15, 2025<br>
 IPTV can load the default WEBVIEW source.<br>
 Fixed multi-language support.<br>
