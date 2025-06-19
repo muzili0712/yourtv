@@ -27,6 +27,10 @@ https://t.me/yourtvapp<br>
 <img src="./530.jpg" alt="image"/><br><br>
 <img src="./531.jpg" alt="image"/><br><br>
 ## Update History<br>
+### Updated on June 20, 2025<br>
+Released V1.8.3<br>
+Restored the "Exit APP" switch<br>
+Fixed other bugs<br>
 ### Updated on June 17, 2025<br>
 Released V1.8.2
 Added full screen stretch display mode<br>
