@@ -26,6 +26,10 @@ https://t.me/yourtvapp<br><br>
 <img src="./530.jpg" alt="image"/><br><br>
 <img src="./531.jpg" alt="image"/><br>
 ## 更新歷史
+###  2025年6月20日更新<br>
+V1.8.3版本髮佈<br>
+恢複“退出APP”開關<br>
+修複其它BUG<br>
 ###  2025年6月17日更新<br>
 V1.8.2版本髮佈
 增加全屏拉伸顯示模式<br>
