@@ -30,6 +30,8 @@ https://t.me/yourtvapp<br>
 ### Updated on June 20, 2025<br>
 Released V1.8.3<br>
 Restored the "Exit APP" switch<br>
+Added a long press or quick press 4 times to confirm/center/right button to trigger the display of the settings interface<br>
+(Solved the problem that the settings interface could not be displayed on devices without menu keys)<br>
 Fixed other bugs<br>
 ### Updated on June 17, 2025<br>
 Released V1.8.2
