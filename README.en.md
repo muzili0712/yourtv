@@ -27,6 +27,15 @@ https://t.me/yourtvapp<br>
 <img src="./530.jpg" alt="image"/><br><br>
 <img src="./531.jpg" alt="image"/><br><br>
 ## Update History<br>
+### Updated on June 22, 2025<br>
+Added live source information interface<br>
+-Long press or continuous click to confirm/center key 4 times to trigger)<br>
+-Retain the original long press or continuous right click 4 times to enter the settings interface<br>
+Switch live source to display current line/bus line<br>
+Optimize test code input UI<br>
+Multi-language support full repair<br>
+Large live source file fragmentation analysis<br>
+Fix other bugs<br>
 ### Updated on June 20, 2025<br>
 Released V1.8.3<br>
 Restored the "Exit APP" switch<br>
