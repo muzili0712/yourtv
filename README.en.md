@@ -29,13 +29,14 @@ https://t.me/yourtvapp<br>
 ## Update History<br>
 ### Updated on June 22, 2025<br>
 Added live source information interface<br>
--Long press or continuous click to confirm/center key 4 times to trigger)<br>
--Retain the original long press or continuous right click 4 times to enter the settings interface<br>
-Switch live source to display current line/bus line<br>
-Optimize test code input UI<br>
+-Long press or continuous click on TV to confirm/4 times on the center button to trigger)<br>
+-Long press on the lower right virtual switch source button on the phone to trigger<br>
+-Retain the original long press or continuous click on the right button 4 times to enter the settings interface<br>
+Switch live source to display the current line/bus line<br>
+Optimize the test code input UI/try to keep the same style of multiple interfaces<br>
 Multi-language support full repair<br>
-Large live source file fragmentation analysis<br>
-Fix other bugs<br>
+Segment analysis of large live source files<br>
+Fix other bugs/may bring new bugs<br>
 ### Updated on June 20, 2025<br>
 Released V1.8.3<br>
 Restored the "Exit APP" switch<br>
