@@ -58,6 +58,7 @@ class SettingFragment : Fragment() {
         return binding.root
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -67,11 +68,11 @@ class SettingFragment : Fragment() {
 
         // Initialize controls
         binding.versionName.text = "v${context.appVersionName}"
-        binding.version.text = "https://github.com/horsemail/yourtv"
+        binding.version.text = requireContext().getString(R.string.project_address)
         binding.version.isFocusable = true
         binding.version.isFocusableInTouchMode = true
         binding.version.setOnClickListener {
-            val url = "https://github.com/horsemail/yourtv"
+            val url = requireContext().getString(R.string.project_github_address)
             try {
                 startActivity(Intent(Intent.ACTION_VIEW, url.toUri()).apply { addCategory(Intent.CATEGORY_BROWSABLE) })
             } catch (e: Exception) {
@@ -121,48 +122,15 @@ class SettingFragment : Fragment() {
             mainActivity.settingActive()
         }
 
-        // 设置 switchWebviewType 的初始状态
-        binding.switchWebviewType.isChecked = SP.useX5WebView // 直接使用儲存值
-        // 更新 switchWebviewType 的逻辑
-        setupSwitch(binding.switchWebviewType, SP.useX5WebView) { isChecked ->
-            val isX5AvailableNow = YourTVApplication.getInstance().isX5Available()
-            Log.d(TAG, "switchWebviewType toggled: isChecked=$isChecked, isX5Available=$isX5AvailableNow")
-            if (!isX5AvailableNow) {
-                // X5 不可用，不切换状态，仅显示提示
-                binding.switchWebviewType.isChecked = false
-                SP.useX5WebView = false
-                Toast.makeText(context, "未安装X5，请按上面‘安装X5’按钮安装", Toast.LENGTH_LONG).show()
-                return@setupSwitch
-            }
-
-            SP.useX5WebView = isChecked
-            if (SP.useX5WebView != isChecked) {
-                Log.e(TAG, "SP.useX5WebView save failed: expected $isChecked, got ${SP.useX5WebView}")
-                Toast.makeText(context, "保存设置失败，请重试", Toast.LENGTH_SHORT).show()
-                binding.switchWebviewType.isChecked = !isChecked
-                return@setupSwitch
-            }
-
-            Toast.makeText(context, "WebView类型已切换，重启应用中...", Toast.LENGTH_LONG).show()
-            // 清理 WebView 缓存
-            if (isChecked) {
-                com.tencent.smtt.sdk.WebStorage.getInstance().deleteAllData()
-                com.tencent.smtt.sdk.CookieManager.getInstance().removeAllCookies(null)
-            } else {
-                android.webkit.WebStorage.getInstance().deleteAllData()
-                android.webkit.CookieManager.getInstance().removeAllCookies(null)
-            }
-
-            // 延迟重启
-            handler.postDelayed({
-                val restartIntent = Intent(context, com.horsenma.mytv1.MainActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                }
-                context.startActivity(restartIntent)
-                requireActivity().finish()
-            }, 500L)
+        setupSwitch(binding.switchFullScreenMode, com.horsenma.yourtv.SP.fullScreenMode) { isChecked ->
+            com.horsenma.yourtv.SP.fullScreenMode = isChecked
+            mainActivity.updateFullScreenMode(isChecked)
+            (context.applicationContext as YourTVApplication).toggleFullScreenMode(isChecked)
             mainActivity.settingActive()
         }
+
+        // 设置 switchWebviewType 的初始状态
+        updateWebviewTypeSwitch()
 
         binding.switchDisplaySeconds.isChecked = SP.displaySeconds
         binding.switchDisplaySeconds.isFocusable = true
@@ -192,7 +160,7 @@ class SettingFragment : Fragment() {
                 }
             } else {
                 try {
-                    updateManager.checkAndUpdate()
+                    updateManager.checkAndUpdate(isAutoCheck = false)
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to check update: ${e.message}")
                     Toast.makeText(context, string.update_failed, Toast.LENGTH_SHORT).show()
@@ -214,7 +182,7 @@ class SettingFragment : Fragment() {
                 }
             } else {
                 try {
-                    updateManager.checkAndUpdate()
+                    updateManager.checkAndUpdate(isAutoCheck = false)
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to check update: ${e.message}")
                     Toast.makeText(context, string.update_failed, Toast.LENGTH_SHORT).show()
@@ -256,7 +224,7 @@ class SettingFragment : Fragment() {
             hideSelf()
             (activity as? MainActivity)?.settingActive()
         }
-0
+        0
         // 修改退出按钮为X5管理
         binding.exit.setOnClickListener {
             val isX5Available = YourTVApplication.getInstance().isX5Available()
@@ -269,17 +237,17 @@ class SettingFragment : Fragment() {
                     val intent = Intent(context, TbsDebugActivity::class.java).apply {
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK
                     }
-                    Toast.makeText(context, "未安装X5，请按上面‘安装X5’按钮安装", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, getString(R.string.x5_not_installed), Toast.LENGTH_LONG).show()
                     startActivity(intent)
                     Log.d(TAG, "Started TbsDebugActivity")
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to start TbsDebugActivity: ${e.message}", e)
-                    Toast.makeText(context, "无法启动X5安装，请检查配置", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, R.string.x5_install_failed, Toast.LENGTH_SHORT).show()
                 }
             } else {
                 // X5 可用，确保开关状态与 SP.useX5WebView 一致
                 binding.switchWebviewType.isChecked = SP.useX5WebView
-                Toast.makeText(context, "X5内核已初始化，无需下载", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, R.string.x5_already_initialized, Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -319,10 +287,9 @@ class SettingFragment : Fragment() {
             i.layoutParams = btnLayoutParams
             i.setOnFocusChangeListener { _, hasFocus ->
                 if (hasFocus) {
-                    i.background = ContextCompat.getColor(context, R.color.focus).toDrawable()
+                    //i.background = ContextCompat.getColor(context, R.color.focus).toDrawable()
                     i.setTextColor(ContextCompat.getColor(context, R.color.white))
                 } else {
-                    i.background = ContextCompat.getColor(context, R.color.description_blur).toDrawable()
                     i.setTextColor(ContextCompat.getColor(context, R.color.blur))
                 }
             }
@@ -343,6 +310,7 @@ class SettingFragment : Fragment() {
             binding.switchCompactMenu,
             binding.switchDisplaySeconds,
             binding.switchWebviewType,
+            binding.switchFullScreenMode,
         )) {
             i.textSize = textSizeSwitch
             i.layoutParams = layoutParamsSwitch
@@ -412,6 +380,7 @@ class SettingFragment : Fragment() {
                             R.id.switch_compact_menu -> binding.switchCompactMenu.toggle()
                             R.id.switch_display_seconds -> binding.switchDisplaySeconds.toggle()
                             R.id.switch_webview_type -> binding.switchWebviewType.toggle()
+                            R.id.switch_full_screen_mode -> binding.switchFullScreenMode.toggle()
                         }
                         return@setOnKeyListener true
                     }
@@ -425,6 +394,53 @@ class SettingFragment : Fragment() {
         }
 
         mainActivity.ready(TAG)
+    }
+
+    private fun updateWebviewTypeSwitch() {
+        val isX5Available = YourTVApplication.getInstance().isX5Available()
+        Log.d(TAG, "updateWebviewTypeSwitch: isX5Available=$isX5Available, useX5WebView=${SP.useX5WebView}")
+
+        if (!isX5Available) {
+            binding.switchWebviewType.visibility = View.GONE
+            binding.switchWebviewType.isFocusable = false
+            binding.switchWebviewType.isFocusableInTouchMode = false
+            SP.useX5WebView = false
+        } else {
+            binding.switchWebviewType.visibility = View.VISIBLE
+            binding.switchWebviewType.isChecked = SP.useX5WebView
+            binding.switchWebviewType.isFocusable = true
+            binding.switchWebviewType.isFocusableInTouchMode = true
+            setupSwitch(binding.switchWebviewType, SP.useX5WebView) { isChecked ->
+                Log.d(TAG, "switchWebviewType toggled: isChecked=$isChecked")
+                SP.useX5WebView = isChecked
+                if (SP.useX5WebView != isChecked) {
+                    Log.e(TAG, "SP.useX5WebView save failed: expected $isChecked, got ${SP.useX5WebView}")
+                    Toast.makeText(requireContext(), getString(R.string.save_settings_failed), Toast.LENGTH_SHORT).show()
+                    binding.switchWebviewType.isChecked = !isChecked
+                    return@setupSwitch
+                }
+
+                Toast.makeText(requireContext(), getString(R.string.webview_switched), Toast.LENGTH_LONG).show()
+                // 清理 WebView 缓存
+                if (isChecked) {
+                    com.tencent.smtt.sdk.WebStorage.getInstance().deleteAllData()
+                    com.tencent.smtt.sdk.CookieManager.getInstance().removeAllCookies(null)
+                } else {
+                    android.webkit.WebStorage.getInstance().deleteAllData()
+                    android.webkit.CookieManager.getInstance().removeAllCookies(null)
+                }
+
+                // 延迟重启
+                handler.postDelayed({
+                    val restartIntent = Intent(requireContext(), com.horsenma.mytv1.MainActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    }
+                    requireContext().startActivity(restartIntent)
+                    requireActivity().finish()
+                }, 500L)
+                (activity as? MainActivity)?.settingActive()
+            }
+        }
     }
 
     private fun hideSelf() {
@@ -443,8 +459,8 @@ class SettingFragment : Fragment() {
 
     private fun showClearDialog() {
         val dialog = androidx.appcompat.app.AlertDialog.Builder(requireContext())
-            .setMessage("确认重置设置？")
-            .setPositiveButton("确认") { _, _ ->
+            .setMessage(getString(R.string.confirm_reset))
+            .setPositiveButton(R.string.confirm) { _, _ ->
                 SP.configUrl = ""
                 SP.channel = 0
                 requireContext().deleteFile(TVList.CACHE_FILE_NAME)
@@ -455,7 +471,7 @@ class SettingFragment : Fragment() {
                 (activity as? MainActivity)?.settingActive()
                 Log.d(TAG, "Settings cleared")
             }
-            .setNegativeButton("取消") { dialog, _ ->
+            .setNegativeButton(R.string.cancel) { dialog, _ ->
                 dialog.dismiss()
                 (activity as? MainActivity)?.settingActive()
                 Log.d(TAG, "Clear settings cancelled")
@@ -492,15 +508,8 @@ class SettingFragment : Fragment() {
         super.onHiddenChanged(hidden)
         if (!hidden) {
             // 初始化 switchWebviewType
-            val isX5Available = YourTVApplication.getInstance().isX5Available()
-            Log.d(TAG, "Initializing switchWebviewType: isX5Available=$isX5Available, useX5WebView=${SP.useX5WebView}")
-            binding.switchWebviewType.isChecked = SP.useX5WebView
-            binding.switchWebviewType.isEnabled = isX5Available
-            if (!isX5Available && SP.useX5WebView) {
-                SP.useX5WebView = false
-                binding.switchWebviewType.isChecked = false
-                Toast.makeText(requireContext(), "X5未初始化，自動禁用X5 WebView", Toast.LENGTH_SHORT).show()
-            }
+            updateWebviewTypeSwitch()
+
             view?.post {
                 binding.remoteSettings.isFocusable = true
                 binding.remoteSettings.isFocusableInTouchMode = true
@@ -528,7 +537,7 @@ class SettingFragment : Fragment() {
         if (permissionsList.isNotEmpty()) {
             ActivityCompat.requestPermissions(requireActivity(), permissionsList.toTypedArray(), PERMISSIONS_REQUEST_CODE)
         } else {
-            updateManager.checkAndUpdate()
+            updateManager.checkAndUpdate(isAutoCheck = false)
         }
     }
 
@@ -553,7 +562,7 @@ class SettingFragment : Fragment() {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 TVList.parseUri(uri)
             } else {
-                "权限授权失败".showToast(Toast.LENGTH_LONG)
+                R.string.permission_failed.showToast(Toast.LENGTH_LONG)
             }
         }
         if (requestCode == PERMISSIONS_REQUEST_CODE) {
@@ -565,9 +574,9 @@ class SettingFragment : Fragment() {
                 }
             }
             if (allPermissionsGranted) {
-                updateManager.checkAndUpdate()
+                updateManager.checkAndUpdate(isAutoCheck = false)
             } else {
-                "权限授权失败".showToast(Toast.LENGTH_LONG)
+                R.string.permission_failed.showToast(Toast.LENGTH_LONG)
             }
         }
     }

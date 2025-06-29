@@ -52,8 +52,8 @@ object TVList {
     fun init(context: Context) {
         _position.value = 0
 
-        groupModel.addTVListModel(TVListModel("我的收藏", 0))
-        groupModel.addTVListModel(TVListModel("全部频道", 1))
+        groupModel.addTVListModel(TVListModel(context.getString(R.string.my_favorites), 0))
+        groupModel.addTVListModel(TVListModel(context.getString(R.string.all_channels), 1))
 
         appDirectory = context.filesDir
         val file = File(appDirectory, CACHE_FILE_NAME)
@@ -103,19 +103,19 @@ object TVList {
                             if (str2List(str)) {
                                 file.writeText(str)
                                 SP.configUrl = serverUrl
-                                "频道导入成功".showToast()
+                                R.string.channel_import_success.showToast()
                             } else {
-                                "频道导入错误".showToast()
+                                R.string.channel_import_error.showToast()
                             }
                         }
                     }
                 } else {
                     Log.e("", "request status ${response.code}")
-                    "频道状态错误".showToast()
+                    R.string.channel_import_error.showToast()
                 }
             } catch (e: Exception) {
                 Log.e("", "request error $e")
-                "频道请求错误".showToast()
+                R.string.channel_import_error.showToast()
             }
         }
     }
@@ -133,21 +133,21 @@ object TVList {
                 Log.i(TAG, "read $file")
                 file.readText()
             } else {
-                "文件不存在".showToast(Toast.LENGTH_LONG)
+                R.string.file_not_exist.showToast(Toast.LENGTH_LONG)
                 return
             }
 
             try {
                 if (str2List(str)) {
                     SP.configUrl = uri.toString()
-                    "频道导入成功".showToast(Toast.LENGTH_LONG)
+                    R.string.channel_import_success.showToast(Toast.LENGTH_LONG)
                 } else {
-                    "频道导入失败".showToast(Toast.LENGTH_LONG)
+                    R.string.channel_import_error.showToast(Toast.LENGTH_LONG)
                 }
             } catch (e: Exception) {
                 Log.e("", "error $e")
                 file.deleteOnExit()
-                "读取频道失败".showToast(Toast.LENGTH_LONG)
+                R.string.channel_import_error.showToast(Toast.LENGTH_LONG)
             }
         } else {
             update(uri.toString())

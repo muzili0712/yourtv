@@ -18,10 +18,8 @@ object Utils {
     private var between: Long = 0
 
     fun getDateFormat(format: String): String {
-        return SimpleDateFormat(
-            format,
-            Locale.CHINA
-        ).format(Date(System.currentTimeMillis() - between))
+        return SimpleDateFormat(format, Locale.getDefault())
+            .format(Date(System.currentTimeMillis() - between))
     }
 
     fun getDateTimestamp(): Long {

@@ -31,8 +31,6 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import com.horsenma.yourtv.databinding.SettingsWebBinding
-import java.util.Locale
-import java.io.File
 import kotlin.math.abs
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.delay
@@ -48,7 +46,11 @@ import com.horsenma.yourtv.models.TVModel
 import androidx.core.view.isVisible
 import android.app.Dialog
 import android.content.Intent
+import androidx.annotation.RequiresApi
 import com.horsenma.yourtv.Utils.ViewModelUtils
+import androidx.core.content.edit
+import androidx.recyclerview.widget.RecyclerView
+
 
 @Suppress("UNUSED_EXPRESSION", "DEPRECATION")
 class MainActivity : AppCompatActivity() {
@@ -64,12 +66,15 @@ class MainActivity : AppCompatActivity() {
     internal var menuFragment = com.horsenma.yourtv.MenuFragment()
     internal var settingFragment = com.horsenma.yourtv.SettingFragment()
     internal var programFragment = com.horsenma.yourtv.ProgramFragment()
+    internal var sourceSelectFragment = com.horsenma.yourtv.SourceSelectFragment()
 
     private val handler = Handler(Looper.myLooper()!!)
     private val delayHideMenu = 10 * 1000L
     private val delayHideSetting = 1 * 60 * 1000L
     lateinit var gestureDetector: GestureDetector
     private var server: SimpleServer? = null
+    private lateinit var updateManager: UpdateManager
+    private val sharedPrefs by lazy { getSharedPreferences("UpdatePrefs", MODE_PRIVATE) }
 
     private var menuPressCount = 0
     private var lastMenuPressTime = 0L
@@ -80,6 +85,21 @@ class MainActivity : AppCompatActivity() {
     private val DEBOUNCE_INTERVAL = 2000L
     private var lastBackPressTime = 0L
     private val BACK_PRESS_INTERVAL = 2000L
+
+    private val handleRightRunnable = Runnable {
+        if (menuPressCount == 1) { // 仅单次按右键触发 sourceUp
+            sourceUp()
+        }
+        menuPressCount = 0 // 重置计数
+    }
+
+    private val handleEnterRunnable = Runnable {
+        if (menuPressCount == 1) { // 仅单次按键触发 menuFragment
+            showFragment(menuFragment)
+            menuActive()
+        }
+        menuPressCount = 0 // 重置计数
+    }
 
     private val handleTapRunnable = Runnable {
         if (menuPressCount >= REQUIRED_MENU_PRESSES) {
@@ -108,6 +128,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var userVerificationHandler: UserVerificationHandler
     private lateinit var dialog: Dialog
     private lateinit var verificationCallback: VerificationCallback
+    private var lastSourceUpTime = 0L
+    private val sourceUpDebounce = 2_000L
 
     // Callback interface for verification dialog
     interface VerificationCallback {
@@ -118,30 +140,15 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        // 简化全屏设置
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
-        windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
-        windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        window.statusBarColor = Color.TRANSPARENT
-        window.navigationBarColor = Color.TRANSPARENT
-
+        updateFullScreenMode(SP.fullScreenMode)
         setContentView(R.layout.activity_main)
-        if (savedInstanceState == null) {
-            supportFragmentManager.beginTransaction()
-                .add(R.id.main_browse_fragment, loadingFragment)
-                .commitNow()
-        }
 
         UserInfoManager.initialize(applicationContext)
-
-        // 初始化 ViewModel
         viewModel = ViewModelProvider(this)[MainViewModel::class.java]
         userVerificationHandler = UserVerificationHandler(this, UserInfoManager, viewModel)
+
+        val versionCode = packageManager.getPackageInfo(packageName, 0).versionCode.toLong()
+        updateManager = UpdateManager(this, versionCode)
 
         // 初始化 dialog 和 verificationCallback
         dialog = Dialog(this)
@@ -161,49 +168,46 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // 调用 handleUserVerification
-        if (savedInstanceState == null) {
-            userVerificationHandler.handleUserVerification(dialog, verificationCallback)
-        }
-
-        // 新增：冷启动时检查 enableWebviewType，仅在首次冷启动执行
-        if (savedInstanceState == null && SP.enableWebviewType) {
-            Log.d(TAG, "First cold start with enableWebviewType=true, switching to WebView mode")
-            handleWebviewTypeSwitch(true)
-            return
-        }
-
-        // 新增：冷启动时禁用用户输入和画中画，直到 listModel 初始化
-        if (savedInstanceState == null) {
-            Log.d(TAG, "Cold start detected, disabling user input until listModel initialized")
-            isInputDisabled = true
-            viewModel.channelsOk.observe(this) { isInitialized ->
-                if (isInitialized) {
-                    isInputDisabled = false
-                    Log.d(TAG, "listModel initialized, user input enabled")
-                }
-            }
-        }
-
-        // 确保焦点
-        findViewById<View>(R.id.main_browse_fragment)?.requestFocus()
-
-        // 添加其他 Fragment，初始只显示 PlayerFragment
+        // 初始化所有 Fragment
         if (savedInstanceState == null) {
             try {
                 supportFragmentManager.beginTransaction()
+                    .add(R.id.main_browse_fragment, loadingFragment)
                     .add(R.id.main_browse_fragment, playerFragment)
                     .add(R.id.main_browse_fragment, infoFragment)
                     .add(R.id.main_browse_fragment, channelFragment)
                     .add(R.id.main_browse_fragment, menuFragment)
                     .add(R.id.main_browse_fragment, settingFragment)
+                    .add(R.id.main_browse_fragment, sourceSelectFragment)
                     .hide(infoFragment)
                     .hide(channelFragment)
                     .hide(menuFragment)
                     .hide(settingFragment)
-                    .commitNowAllowingStateLoss()
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to add fragments: ${e.message}", e)
+                    .hide(sourceSelectFragment)
+                    .commitNow()
+            } catch (e: IllegalStateException) {
+                Log.e(TAG, "Failed to add fragments: ${e.message}")
+                supportFragmentManager.beginTransaction()
+                    .add(R.id.main_browse_fragment, loadingFragment)
+                    .add(R.id.main_browse_fragment, playerFragment)
+                    .add(R.id.main_browse_fragment, infoFragment)
+                    .add(R.id.main_browse_fragment, channelFragment)
+                    .add(R.id.main_browse_fragment, menuFragment)
+                    .add(R.id.main_browse_fragment, settingFragment)
+                    .add(R.id.main_browse_fragment, sourceSelectFragment)
+                    .hide(infoFragment)
+                    .hide(channelFragment)
+                    .hide(menuFragment)
+                    .hide(settingFragment)
+                    .hide(sourceSelectFragment)
+                    .commit()
+            }
+        }
+
+        // 设置全屏模式监听器
+        YourTVApplication.getInstance().setFullScreenModeListener {
+            if (playerFragment.isAdded) {
+                playerFragment.onFullScreenModeChanged()
             }
         }
 
@@ -316,7 +320,77 @@ class MainActivity : AppCompatActivity() {
                 menuActive()
                 R.string.initialization_error.showToast()
             }
-        }    }
+        }
+    }
+
+    fun updateFullScreenMode(isFullScreen: Boolean) {
+        window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            WindowCompat.setDecorFitsSystemWindows(window, !isFullScreen)
+            val params = window.attributes
+            if (isFullScreen) {
+                windowInsetsController.hide(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
+                params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            } else {
+                windowInsetsController.show(WindowInsetsCompat.Type.systemBars())
+                params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT
+            }
+            window.attributes = params
+        } else {
+            // API 23-27: 使用传统全屏方式
+            if (isFullScreen) {
+                window.setFlags(
+                    WindowManager.LayoutParams.FLAG_FULLSCREEN or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                    WindowManager.LayoutParams.FLAG_FULLSCREEN or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+                )
+            } else {
+                window.clearFlags(
+                    WindowManager.LayoutParams.FLAG_FULLSCREEN or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+                )
+                // 不需要额外设置 FLAG_LAYOUT_STABLE，清除 FLAG_FULLSCREEN 后系统会自动调整内容适应系统栏
+            }
+        }
+
+        // 设置系统栏行为，兼容低版本
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            windowInsetsController.systemBarsBehavior = if (isFullScreen) {
+                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            } else {
+                WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
+            }
+        } else {
+            window.decorView.systemUiVisibility = if (isFullScreen) {
+                View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                        View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
+                        View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+                        View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+            } else {
+                View.SYSTEM_UI_FLAG_VISIBLE // 恢复默认可见状态
+            }
+        }
+
+        window.statusBarColor = Color.TRANSPARENT
+        window.navigationBarColor = Color.TRANSPARENT
+        window.decorView.requestLayout()
+        window.decorView.invalidate()
+        Log.d(TAG, "updateFullScreenMode: isFullScreen=$isFullScreen")
+
+        if (isSafeToPerformFragmentTransactions && playerFragment.isAdded && !playerFragment.isInPictureInPictureMode) {
+            handler.removeCallbacksAndMessages(null)
+            handler.post {
+                playerFragment.onFullScreenModeChanged()
+                playerFragment.view?.findViewById<View>(R.id.player_view)?.let { playerView ->
+                    playerView.requestFocus()
+                    playerView.requestLayout()
+                }
+                val displayMetrics = resources.displayMetrics
+                Log.d(TAG, "Window size: width=${displayMetrics.widthPixels}, height=${displayMetrics.heightPixels}")
+            }
+        }
+    }
 
     fun updateMenuSize() {
         menuFragment.updateSize()
@@ -335,6 +409,7 @@ class MainActivity : AppCompatActivity() {
             supportFragmentManager.beginTransaction()
                 .hide(menuFragment)
                 .hide(settingFragment)
+                .hide(sourceSelectFragment)
                 .commit()
             viewModel.groupModel.change.observe(this) { _ ->
                 if (viewModel.groupModel.tvGroup.value != null) {
@@ -479,14 +554,17 @@ class MainActivity : AppCompatActivity() {
     private inner class GestureListener(context: Context) :
         GestureDetector.SimpleOnGestureListener() {
 
-        private var screenWidth = windowManager.defaultDisplay.width
-        private var screenHeight = windowManager.defaultDisplay.height
+        private var screenWidth: Int
+        private var screenHeight: Int
         private val audioManager = context.getSystemService(AUDIO_SERVICE) as AudioManager
 
         private var maxVolume = 0
 
         init {
             maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+            val displayMetrics = resources.displayMetrics
+            screenWidth = displayMetrics.widthPixels
+            screenHeight = displayMetrics.heightPixels
         }
 
         override fun onDown(e: MotionEvent): Boolean {
@@ -708,41 +786,48 @@ class MainActivity : AppCompatActivity() {
     }
 
     // 更新 showFragment 方法，确保画中画模式下视图可见
-    private fun showFragment(fragment: Fragment) {
+    internal fun showFragment(fragment: Fragment) {
         if (!isSafeToPerformFragmentTransactions) {
             return
         }
+        val transaction = supportFragmentManager.beginTransaction()
         if (!fragment.isAdded) {
-            supportFragmentManager.beginTransaction()
-                .add(R.id.main_browse_fragment, fragment)
-                .commitNowAllowingStateLoss()
-        }
-        if (!fragment.isHidden) {
+            transaction.add(R.id.main_browse_fragment, fragment)
+        } else if (!fragment.isHidden) {
             return
         }
-        supportFragmentManager.beginTransaction()
-            .show(fragment)
-            .commitNowAllowingStateLoss()
-        // 强制确保视图可见
+        transaction.show(fragment)
+        try {
+            transaction.commitNow()
+        } catch (e: IllegalStateException) {
+            Log.e(TAG, "Fragment transaction failed, falling back to commit: ${e.message}")
+            transaction.commit()
+        }
         fragment.view?.visibility = View.VISIBLE
-        // fragment.view?.requestFocus()
     }
 
     private fun hideFragment(fragment: Fragment) {
-        if (!isSafeToPerformFragmentTransactions) {
+        if (!isSafeToPerformFragmentTransactions || !fragment.isAdded || fragment.isHidden) {
             return
         }
-
-        if (!fragment.isAdded || fragment.isHidden) {
-            return
+        val transaction = supportFragmentManager.beginTransaction()
+        transaction.hide(fragment)
+        try {
+            transaction.commitNow()
+        } catch (e: IllegalStateException) {
+            Log.e(TAG, "Fragment hide transaction failed, falling back to commit: ${e.message}")
+            transaction.commit()
         }
-
-        supportFragmentManager.beginTransaction()
-            .hide(fragment)
-            .commitAllowingStateLoss()
     }
 
     fun sourceUp() {
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastSourceUpTime < sourceUpDebounce) {
+            Log.d(TAG, "Debounced sourceUp for ${viewModel.groupModel.getCurrent()?.tv?.title}")
+            return
+        }
+        lastSourceUpTime = currentTime
+
         var tvModel = viewModel.groupModel.getCurrent()
         if (tvModel == null) {
             Log.w(TAG, "sourceUp: tvModel is null, attempting to fix groupModel")
@@ -756,8 +841,6 @@ class MainActivity : AppCompatActivity() {
                 return
             }
         }
-        playerFragment.switchSource(tvModel) // 直接调用 switchSource 更新 tvModel
-        Log.d(TAG, "sourceUp tvModel: ${tvModel.tv.title}, uris: ${tvModel.tv.uris.size}")
 
         val urls = tvModel.tv.uris.filter { it.isNotBlank() }
         if (urls.isEmpty()) {
@@ -771,20 +854,19 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        lifecycleScope.launch(Dispatchers.Main) {
-            tvModel.nextVideo()
-            tvModel.confirmVideoIndex()
-            playerFragment.switchSource(tvModel)
-            showSourceInfo(tvModel.videoIndexValue + 1)
-            Log.d(TAG, "sourceUp: switched to source ${tvModel.videoIndexValue + 1}, uris: ${tvModel.tv.uris.size}")
-        }
+        // 只调用一次 nextVideo 和 switchSource
+        tvModel.nextVideo()
+        tvModel.confirmVideoIndex()
+        playerFragment.switchSource(tvModel)
+        showSourceInfo(tvModel.videoIndexValue + 1, urls.size)
+        Log.d(TAG, "sourceUp: switched to source ${tvModel.videoIndexValue + 1}, uris: ${tvModel.tv.uris.size}")
     }
 
-    private fun showSourceInfo(sourceIndex: Int) {
-        val toast = android.widget.Toast.makeText(
+    private fun showSourceInfo(sourceIndex: Int, totalSources: Int) {
+        val toast = Toast.makeText(
             this,
-            "线路 $sourceIndex",
-            android.widget.Toast.LENGTH_SHORT
+            "线路 $sourceIndex / $totalSources",
+            Toast.LENGTH_LONG
         )
         val textView = toast.view?.findViewById<TextView>(android.R.id.message)
         textView?.textSize = 30f
@@ -793,7 +875,7 @@ class MainActivity : AppCompatActivity() {
 
         handler.postDelayed({
             toast.cancel()
-        }, 3000)
+        }, 5000)
     }
 
     fun menuActive() {
@@ -835,6 +917,106 @@ class MainActivity : AppCompatActivity() {
         } else {
             hideFragment(timeFragment)
         }
+    }
+
+    private fun scheduleAutoVersionCheck() {
+        // 检查是否需要自动检查（24小时内只检查一次）
+        val lastCheckTime = sharedPrefs.getLong("last_auto_check_time", 0)
+        val currentTime = System.currentTimeMillis()
+        val checkInterval = 24 * 60 * 60 * 1000L // 24小时
+        if (currentTime - lastCheckTime < checkInterval) {
+            Log.d(TAG, "Auto version check skipped, last check within 24 hours")
+            return
+        }
+
+        // 延时3秒触发版本检查
+        handler.postDelayed({
+            // 确保设置界面未打开，避免干扰用户操作
+            if (settingFragment.isAdded && !settingFragment.isHidden) {
+                Log.d(TAG, "SettingFragment is visible, skipping auto version check")
+                return@postDelayed
+            }
+
+            Log.d(TAG, "Triggering auto version check")
+            // 获取当前版本号
+            val currentVersionCode = packageManager.getPackageInfo(packageName, 0).versionCode.toLong()
+
+            // 获取存储的版本信息和检查次数
+            val lastDetectedVersion = sharedPrefs.getLong("last_detected_version", 0)
+            val updateCheckCount = sharedPrefs.getInt("update_check_count", 0)
+            val firstUpdateDetectedTime = sharedPrefs.getLong("first_update_detected_time", 0)
+
+            // 执行版本检查
+            CoroutineScope(Dispatchers.Main).launch {
+                try {
+                    val release = updateManager.getRelease() // 获取版本信息
+                    updateManager.release = release // 更新 UpdateManager 的 release
+                    val versionCodeFromRelease = release?.version_code
+
+                    // 记录检查时间
+                    sharedPrefs.edit() {
+                        putLong("last_auto_check_time", currentTime)
+                    }
+
+                    // 如果检测到新版本
+                    if (versionCodeFromRelease != null && versionCodeFromRelease > currentVersionCode) {
+                        if (lastDetectedVersion == 0L) {
+                            // 首次发现新版本，记录时间和当前版本号
+                            sharedPrefs.edit() {
+                                putLong("first_update_detected_time", currentTime)
+                                    .putLong("last_detected_version", currentVersionCode)
+                                    .putInt("update_check_count", 1)
+                            }
+                            Log.d(TAG, "First update detected, version: $currentVersionCode, time: $currentTime")
+                        } else if (lastDetectedVersion == currentVersionCode) {
+                            // 非首次检查，版本未更新，增加检查次数
+                            val newCount = updateCheckCount + 1
+                            sharedPrefs.edit() {
+                                putInt("update_check_count", newCount)
+                            }
+                            Log.d(TAG, "Update check count incremented to $newCount")
+
+                            // 检查次数达到 3 次或 5 次，显示“必须更新”提示
+                            if (newCount == 3 || newCount == 4) {
+                                Toast.makeText(this@MainActivity, R.string.please_update, Toast.LENGTH_LONG).show()
+                                Log.d(TAG, "Displayed mandatory update prompt at check count $newCount")
+                            }
+                            if (newCount == 5) {
+                                Toast.makeText(this@MainActivity, R.string.force_update_soon, Toast.LENGTH_LONG).show()
+                                Log.d(TAG, "Displayed mandatory update prompt at check count $newCount")
+                            }
+                            // 检查次数达到 6 次，显示提示并退出
+                            else if (newCount >= 6) {
+                                val toast = Toast.makeText(this@MainActivity, R.string.too_old_version, Toast.LENGTH_LONG)
+                                toast.setGravity(Gravity.CENTER, 0, 0)
+                                toast.show()
+                                Log.d(TAG, "Displayed force update prompt at check count $newCount, exiting in 10s")
+                                handler.postDelayed({
+                                    finishAffinity()
+                                }, 10000) // 10秒后退出
+                            }
+                        } else {
+                            // 版本已更新，重置计数和记录
+                            sharedPrefs.edit() {
+                                putLong("last_detected_version", 0)
+                                    .putInt("update_check_count", 0)
+                                    .putLong("first_update_detected_time", 0)
+                            }
+                            Log.d(TAG, "Version updated, reset update check count and records")
+                        }
+                    } else {
+                        // 无新版本，静默结束
+                        Log.d(TAG, "No new version available, versionCode=$currentVersionCode, remote=$versionCodeFromRelease")
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Version check failed: ${e.message}", e)
+                    // 记录检查时间，即使失败
+                    sharedPrefs.edit() {
+                        putLong("last_auto_check_time", currentTime)
+                    }
+                }
+            }
+        }, 3000) // 延时3秒
     }
 
     private fun showChannel(channel: Int) {
@@ -988,6 +1170,39 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("GestureBackNavigation")
     fun onKey(keyCode: Int): Boolean {
+        // 优先检查 SourceSelectFragment 是否可见
+        if (sourceSelectFragment.isAdded && sourceSelectFragment.isVisible) {
+            when (keyCode) {
+                KEYCODE_ESCAPE, KEYCODE_BACK -> {
+                    sourceSelectFragment.hideSelf()
+                    return true
+                }
+                KEYCODE_DPAD_UP, KEYCODE_DPAD_DOWN -> {
+                    // 直接请求 RecyclerView 的焦点导航
+                    val recyclerView = sourceSelectFragment.view?.findViewById<RecyclerView>(R.id.source_list)
+                    val currentFocus = recyclerView?.findFocus() ?: recyclerView
+                    val nextFocus = currentFocus?.focusSearch(
+                        if (keyCode == KEYCODE_DPAD_UP) View.FOCUS_UP else View.FOCUS_DOWN
+                    )
+                    nextFocus?.requestFocus()
+                    return true
+                }
+                KEYCODE_DPAD_LEFT, KEYCODE_DPAD_RIGHT -> {
+                    // 忽略左右键
+                    return true
+                }
+                KEYCODE_ENTER, KEYCODE_DPAD_CENTER -> {
+                    // 触发当前焦点的点击
+                    sourceSelectFragment.view?.findFocus()?.performClick()
+                    return true
+                }
+                else -> {
+                    // 其他按键分发到 RecyclerView
+                    sourceSelectFragment.view?.findViewById<RecyclerView>(R.id.source_list)?.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, keyCode))
+                    return true
+                }
+            }
+        }
         when (keyCode) {
             KEYCODE_ESCAPE, KEYCODE_BACK -> {
                 if (menuFragment.isAdded && !menuFragment.isHidden) {
@@ -1005,6 +1220,10 @@ class MainActivity : AppCompatActivity() {
                 }
                 if (channelFragment.isAdded && channelFragment.isVisible) {
                     channelFragment.hideSelf()
+                    return true
+                }
+                if (sourceSelectFragment.isAdded && sourceSelectFragment.isVisible) {
+                    sourceSelectFragment.hideSelf()
                     return true
                 }
                 val currentTime = System.currentTimeMillis()
@@ -1071,7 +1290,7 @@ class MainActivity : AppCompatActivity() {
                             if (key.isNotEmpty() && key.matches("[0-9A-Z]{1,20}".toRegex())) {
                                 userVerificationHandler.triggerConfirm(key, dialog, verificationCallback)
                             } else {
-                                userVerificationHandler.showErrorText("測試碼格式錯，請重新輸入。")
+                                userVerificationHandler.showErrorText(getString(R.string.error_invalid_code))
                                 userVerificationHandler.requestKeyInputFocus()
                             }
                             settingActive() // 新增：确认按钮按键重置计时器
@@ -1089,7 +1308,26 @@ class MainActivity : AppCompatActivity() {
                     channelFragment.playNow()
                     return true
                 }
-                showFragment(menuFragment)
+                // 新增：处理连续按确认键逻辑
+                val currentTime = System.currentTimeMillis()
+                val timeSinceLastPress = currentTime - lastMenuPressTime
+
+                if (timeSinceLastPress <= 400) { // 400ms 内连续按
+                    menuPressCount++
+                    if (menuPressCount >= 4) { // 连续按4次，显示 settingFragment
+                        showFragment(sourceSelectFragment)
+                        menuPressCount = 0
+                        handler.removeCallbacks(handleEnterRunnable) // 取消可能的 menuFragment 显示
+                        return true
+                    }
+                } else {
+                    menuPressCount = 1 // 重置计数
+                }
+                lastMenuPressTime = currentTime
+
+                // 延迟600ms检查是否显示 menuFragment
+                handler.removeCallbacks(handleEnterRunnable)
+                handler.postDelayed(handleEnterRunnable, 600)
                 return true
             }
 
@@ -1135,7 +1373,26 @@ class MainActivity : AppCompatActivity() {
                     programFragment.isAdded && !programFragment.isHidden) {
                     return false
                 }
-                sourceUp()
+                // 新增：处理连续按右键逻辑
+                val currentTime = System.currentTimeMillis()
+                val timeSinceLastPress = currentTime - lastMenuPressTime
+
+                if (timeSinceLastPress <= 400) { // 400ms 内连续按
+                    menuPressCount++
+                    if (menuPressCount >= 4) { // 连续按4次，显示 settingFragment
+                        showSetting()
+                        menuPressCount = 0
+                        handler.removeCallbacks(handleRightRunnable) // 取消 sourceUp 触发
+                        return true
+                    }
+                } else {
+                    menuPressCount = 1 // 重置计数
+                }
+                lastMenuPressTime = currentTime
+
+                // 延迟600ms检查是否触发 sourceUp
+                handler.removeCallbacks(handleRightRunnable)
+                handler.postDelayed(handleRightRunnable, 600)
                 return true
             }
         }
@@ -1144,20 +1401,17 @@ class MainActivity : AppCompatActivity() {
 
     // 处理主页按钮点击（圆圈虚拟按钮）
     override fun onUserLeaveHint() {
-        // 新增：禁用用户输入时阻止画中画
         if (isInputDisabled) {
             Log.d(TAG, "Picture-in-Picture blocked until listModel initialized")
             return
         }
-
-        // 仅在触摸屏设备上，且 PlayerFragment 可见时，进入画中画模式
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
             isTouchScreenDevice() &&
             playerFragment.isAdded && !playerFragment.isHidden) {
             playerFragment.enterPictureInPictureMode()
             Log.d(TAG, "Entering Picture-in-Picture mode via onUserLeaveHint")
         } else {
-            Log.d(TAG, "Skipped Picture-in-Picture: isTouchScreen=${isTouchScreenDevice()}, playerFragmentAdded=${playerFragment.isAdded}, playerFragmentHidden=${playerFragment.isHidden}")
+            Log.d(TAG, "Skipped Picture-in-Picture: SDK=${Build.VERSION.SDK_INT}, isTouchScreen=${isTouchScreenDevice()}, playerFragmentAdded=${playerFragment.isAdded}, playerFragmentHidden=${playerFragment.isHidden}")
             super.onUserLeaveHint()
         }
     }
@@ -1187,7 +1441,7 @@ class MainActivity : AppCompatActivity() {
     // 处理画中画模式变化
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
-        if (isInPictureInPictureMode) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && isInPictureInPictureMode) {
             hideFragment(menuFragment)
             hideFragment(settingFragment)
             hideFragment(programFragment)
@@ -1196,6 +1450,7 @@ class MainActivity : AppCompatActivity() {
             hideFragment(timeFragment)
             hideFragment(errorFragment)
             hideFragment(loadingFragment)
+            hideFragment(sourceSelectFragment)
             if (playerFragment.isAdded) {
                 playerFragment.enterPictureInPictureMode()
             }
@@ -1206,9 +1461,7 @@ class MainActivity : AppCompatActivity() {
             if (playerFragment.isAdded) {
                 playerFragment.exitPictureInPictureMode()
             }
-            // 恢复焦点到 main_browse_fragment
             findViewById<View>(R.id.main_browse_fragment)?.requestFocus()
-            // 恢复其他 Fragment 状态
             showTimeFragment()
             if (SP.channelNum && viewModel.groupModel.getCurrent() != null) {
                 channelFragment.show(viewModel.groupModel.getCurrent()!!)
@@ -1233,6 +1486,10 @@ class MainActivity : AppCompatActivity() {
         super.onStop()
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
         if (playerFragment.isAdded && playerFragment.player != null && powerManager.isInteractive) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && isInPictureInPictureMode) {
+                Log.d(TAG, "In Picture-in-Picture mode, skipping player release and process termination")
+                return
+            }
             playerFragment.player?.stop()
             playerFragment.player?.release()
             playerFragment.player = null
@@ -1243,35 +1500,20 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         server?.stop()
+        handler.removeCallbacksAndMessages(null)
+        updateManager.destroy()
     }
 
     override fun attachBaseContext(base: Context) {
-        try {
-            val locale = Locale.TRADITIONAL_CHINESE
-            val config = Configuration()
-            config.setLocale(locale)
-            super.attachBaseContext(
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
-                    base.createConfigurationContext(config)
-                } else {
-                    val resources = base.resources
-                    resources.updateConfiguration(config, resources.displayMetrics)
-                    base
-                }
-            )
-        } catch (_: Exception) {
-            super.attachBaseContext(base)
-        }
+        super.attachBaseContext(base)
     }
 
-    // 新增方法，位置：MainActivity 类内部，靠近 viewModel 定义
     fun getViewModel(): MainViewModel {
         return viewModel
     }
 
     fun handleWebviewTypeSwitch(enable: Boolean) {
         if (!enable) return
-
         val currentTime = System.currentTimeMillis()
         if (currentTime - lastSwitchTime < DEBOUNCE_INTERVAL) {
             Log.d(TAG, "Switch ignored due to debounce")
@@ -1298,10 +1540,11 @@ class MainActivity : AppCompatActivity() {
                     .hide(timeFragment)
                     .hide(errorFragment)
                     .hide(loadingFragment)
-                    .commitNowAllowingStateLoss()
+                    .hide(sourceSelectFragment)
+                    .commitNow()
                 Log.d(TAG, "All fragments hidden")
-                SP.enableWebviewType = true
-                Log.d(TAG, "SP.enableWebviewType set to false")
+                com.horsenma.yourtv.SP.enableWebviewType = true
+                Log.d(TAG, "SP.enableWebviewType set to true")
                 delay(500)
                 val intent = Intent(this@MainActivity, com.horsenma.mytv1.MainActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -1320,13 +1563,12 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, "正在切换直播源，请稍候再操作...", Toast.LENGTH_LONG).show()
         val viewModel = ViewModelProvider(this)[MainViewModel::class.java]
         val prefs = getSharedPreferences("SourceCache", Context.MODE_PRIVATE)
-        val cacheCodeFile = File(filesDir, MainViewModel.CACHE_CODE_FILE)
         lifecycleScope.launch {
             try {
                 val cachedContent = prefs.getString("cache_$filename", null)
-                if (cachedContent != null && cacheCodeFile.exists() && System.currentTimeMillis() - prefs.getLong("cache_time_$filename", 0) < 24 * 60 * 60 * 1000) {
+                if (cachedContent != null && System.currentTimeMillis() - prefs.getLong("cache_time_$filename", 0) < 24 * 60 * 60 * 1000) {
                     Log.d(TAG, "switchSource: Using cache for filename=$filename")
-                    viewModel.tryStr2Channels(cachedContent, cacheCodeFile, "", filename)
+                    viewModel.tryStr2Channels(cachedContent, null, "", filename)
                     prefs.edit().putString("active_source", filename).apply()
                     supportFragmentManager.findFragmentByTag("MenuFragment")?.let { (it as MenuFragment).update() }
                     Toast.makeText(this@MainActivity, "直播源切换成功", Toast.LENGTH_SHORT).show()

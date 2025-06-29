@@ -30,5 +30,12 @@ data class StableSource(
     val sourceType: String,
     val number: Int,
     val child: List<TV>,
-    val timestamp: Long
+    val timestamp: Long,
+    // WebView 相关字段
+    val playerType: PlayerType = PlayerType.IPTV, // 播放类型
+    val block: List<String>? = emptyList(), // WebView 黑名单
+    val script: String? = null, // WebView 脚本
+    val selector: String? = null, // WebView 选择器
+    val started: String? = null, // WebView 开始脚本
+    val finished: String? = null // WebView 完成脚本
 ) : Serializable

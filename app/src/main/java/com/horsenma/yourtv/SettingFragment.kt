@@ -37,6 +37,7 @@ import androidx.core.graphics.drawable.toDrawable
 import androidx.core.graphics.toColorInt
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
+import androidx.annotation.RequiresApi
 
 
 @Suppress("DEPRECATION")
@@ -70,6 +71,7 @@ class SettingFragment : Fragment() {
         return hasTouchScreen && !isTv
     }
 
+    @RequiresApi(Build.VERSION_CODES.P)
     @SuppressLint("SetTextI18n", "ClickableViewAccessibility")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -85,11 +87,11 @@ class SettingFragment : Fragment() {
 
         // 初始化控件（保持原有逻辑）
         binding.versionName.text = "v${context.appVersionName}"
-        binding.version.text = "項目地址：https://github.com/horsemail/yourtv"
+        binding.version.text = requireContext().getString(R.string.project_address)
         binding.version.isFocusable = true
         binding.version.isFocusableInTouchMode = true
         binding.version.setOnClickListener {
-            val url = "https://github.com/horsemail/yourtv"
+            val url = requireContext().getString(R.string.project_github_address)
             try {
                 val intent = Intent(Intent.ACTION_VIEW, url.toUri()).apply {
                     addCategory(Intent.CATEGORY_BROWSABLE)
@@ -152,13 +154,6 @@ class SettingFragment : Fragment() {
             mainActivity.settingActive()
         }
 
-        val switchConfigAutoLoad = _binding?.switchConfigAutoLoad
-        switchConfigAutoLoad?.isChecked = SP.configAutoLoad
-        switchConfigAutoLoad?.setOnCheckedChangeListener { _, isChecked ->
-            SP.configAutoLoad = isChecked
-            mainActivity.settingActive()
-        }
-
         val switchDefaultLike = _binding?.switchDefaultLike
         switchDefaultLike?.isChecked = SP.defaultLike
         switchDefaultLike?.setOnCheckedChangeListener { _, isChecked ->
@@ -195,19 +190,21 @@ class SettingFragment : Fragment() {
             mainActivity.settingActive()
         }
 
-        val switchAutoUpdateSources = _binding?.switchAutoUpdateSources
-        switchAutoUpdateSources?.isChecked = SP.autoUpdateSources
-        switchAutoUpdateSources?.setOnCheckedChangeListener { _, isChecked ->
-            SP.autoUpdateSources = isChecked
-            mainActivity.settingActive()
-        }
-
         val isTouchScreen = isTouchScreenDevice(context)
         val switchEnableScreenOffAudio = _binding?.switchEnableScreenOffAudio
         switchEnableScreenOffAudio?.isChecked = SP.enableScreenOffAudio
         switchEnableScreenOffAudio?.visibility = if (isTouchScreen) View.VISIBLE else View.GONE
         switchEnableScreenOffAudio?.setOnCheckedChangeListener { _, isChecked ->
             SP.enableScreenOffAudio = isChecked
+            mainActivity.settingActive()
+        }
+
+        val switchFullScreenMode = _binding?.switchFullScreenMode
+        switchFullScreenMode?.isChecked = SP.fullScreenMode
+        switchFullScreenMode?.setOnCheckedChangeListener { _, isChecked ->
+            SP.fullScreenMode = isChecked
+            mainActivity.updateFullScreenMode(isChecked)
+            (context.applicationContext as YourTVApplication).toggleFullScreenMode(isChecked) // 新增
             mainActivity.settingActive()
         }
 
@@ -230,6 +227,15 @@ class SettingFragment : Fragment() {
             // 通知 PlayerFragment 更新 btn_source 可见性
             if (mainActivity.playerFragment.isAdded) {
                 mainActivity.playerFragment.setSourceButtonVisibility(true)
+            }
+        }
+
+        val switchExit = _binding?.switchExit
+        switchExit?.isChecked = false // Default state for exit switch
+        switchExit?.visibility = View.VISIBLE
+        switchExit?.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                requireActivity().finishAffinity()
             }
         }
 
@@ -257,7 +263,7 @@ class SettingFragment : Fragment() {
                 }
             } else {
                 try {
-                    updateManager.checkAndUpdate()
+                    updateManager.checkAndUpdate(isAutoCheck = false)
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to check update: ${e.message}")
                     Toast.makeText(context, R.string.update_failed, Toast.LENGTH_SHORT).show()
@@ -279,7 +285,7 @@ class SettingFragment : Fragment() {
                 }
             } else {
                 try {
-                    updateManager.checkAndUpdate()
+                    updateManager.checkAndUpdate(isAutoCheck = false)
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to check update: ${e.message}")
                     Toast.makeText(context, R.string.update_failed, Toast.LENGTH_SHORT).show()
@@ -352,10 +358,9 @@ class SettingFragment : Fragment() {
             i.layoutParams = btnLayoutParams
             i.setOnFocusChangeListener { _, hasFocus ->
                 if (hasFocus) {
-                    i.background = ContextCompat.getColor(context,R.color.focus).toDrawable()
+                    //i.background = ContextCompat.getColor(context,R.color.focus).toDrawable()
                     i.setTextColor(ContextCompat.getColor(context,R.color.white))
                 } else {
-                    i.background = ContextCompat.getColor(context,R.color.description_blur                  ).toDrawable()
                     i.setTextColor(ContextCompat.getColor(context,R.color.blur))
                 }
             }
@@ -375,16 +380,16 @@ class SettingFragment : Fragment() {
             binding.switchTime,
             binding.switchBootStartup,
             binding.switchRepeatInfo,
-            binding.switchConfigAutoLoad,
             binding.switchDefaultLike,
             binding.switchShowAllChannels,
             binding.switchCompactMenu,
             binding.switchDisplaySeconds,
             binding.switchSoftDecode,
             binding.switchAutoSwitchSource,
-            binding.switchAutoUpdateSources,
             binding.switchShowSourceButton,
             binding.switchEnableScreenOffAudio,
+            binding.switchFullScreenMode,
+            binding.switchExit,
         )) {
             i.textSize = textSizeSwitch
             i.layoutParams = layoutParamsSwitch
@@ -428,16 +433,15 @@ class SettingFragment : Fragment() {
                     SP.time = SP.DEFAULT_TIME
                     SP.bootStartup = SP.DEFAULT_BOOT_STARTUP
                     SP.repeatInfo = SP.DEFAULT_REPEAT_INFO
-                    SP.configAutoLoad = SP.DEFAULT_CONFIG_AUTO_LOAD
                     SP.defaultLike = false
                     SP.showAllChannels = SP.DEFAULT_SHOW_ALL_CHANNELS
                     SP.compactMenu = SP.DEFAULT_COMPACT_MENU
                     SP.displaySeconds = SP.DEFAULT_DISPLAY_SECONDS
                     SP.autoSwitchSource = SP.DEFAULT_AUTO_SWITCH_SOURCE
-                    SP.autoUpdateSources = SP.DEFAULT_AUTO_UPDATE_SOURCES
                     SP.showSourceButton = SP.DEFAULT_SHOW_SOURCE_BUTTON
                     SP.enableWebviewType = SP.DEFAULT_ENABLE_WEBVIEW_TYPE
                     SP.proxy = SP.DEFAULT_PROXY
+                    SP.fullScreenMode = SP.DEFAULT_FULL_SCREEN_MODE
                     SP.epg = SP.DEFAULT_EPG
                     SP.deleteLike()
 
@@ -562,7 +566,7 @@ class SettingFragment : Fragment() {
         if (requestCode == REQUEST_UNKNOWN_APP_SOURCES) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && requireContext().packageManager.canRequestPackageInstalls()) {
                 try {
-                    updateManager.checkAndUpdate()
+                    updateManager.checkAndUpdate(isAutoCheck = false)
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to check update after permission: ${e.message}")
                     Toast.makeText(requireContext(), R.string.update_failed, Toast.LENGTH_SHORT).show()
@@ -624,23 +628,9 @@ class SettingFragment : Fragment() {
                 permissionsList.toTypedArray(),
                 PERMISSIONS_REQUEST_CODE
             )
-        }
-    }
-
-    private fun requestReadPermissions() {
-        val context = requireContext()
-        val permissionsList = mutableListOf<String>()
-
-        checkAndAddPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE, permissionsList)
-
-        if (permissionsList.isNotEmpty()) {
-            ActivityCompat.requestPermissions(
-                requireActivity(),
-                permissionsList.toTypedArray(),
-                PERMISSIONS_REQUEST_CODE
-            )
         } else {
-            viewModel.importFromUri(uri)
+            // 权限已授予，直接检查更新
+            updateManager.checkAndUpdate(isAutoCheck = false)
         }
     }
 
@@ -651,16 +641,35 @@ class SettingFragment : Fragment() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == PERMISSIONS_REQUEST_CODE) {
-            var allPermissionsGranted = true
-            for (result in grantResults) {
-                if (result != PackageManager.PERMISSION_GRANTED) {
-                    allPermissionsGranted = false
-                    break
+        when (requestCode) {
+            PERMISSIONS_REQUEST_CODE -> {
+                var allPermissionsGranted = true
+                for (result in grantResults) {
+                    if (result != PackageManager.PERMISSION_GRANTED) {
+                        allPermissionsGranted = false
+                        break
+                    }
+                }
+                if (!allPermissionsGranted) {
+                    Toast.makeText(requireContext(), R.string.authorization_failed, Toast.LENGTH_SHORT).show()
+                    Log.w(TAG, "Permissions denied for requestCode=$PERMISSIONS_REQUEST_CODE")
+                } else {
+                    Log.i(TAG, "All permissions granted for requestCode=$PERMISSIONS_REQUEST_CODE")
                 }
             }
-            if (!allPermissionsGranted) {
-                Toast.makeText(requireContext(), R.string.authorization_failed, Toast.LENGTH_SHORT).show()
+            100 -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    Log.i(TAG, "WRITE_EXTERNAL_STORAGE permission granted")
+                    try {
+                        updateManager.checkAndUpdate(isAutoCheck = false)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to check update after permission granted: ${e.message}")
+                        Toast.makeText(requireContext(), R.string.update_failed, Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    Log.w(TAG, "WRITE_EXTERNAL_STORAGE permission denied")
+                    Toast.makeText(requireContext(), R.string.grant_storage_permissions, Toast.LENGTH_LONG).show()
+                }
             }
         }
     }
@@ -671,7 +680,7 @@ class SettingFragment : Fragment() {
         val dialog = Dialog(requireContext()).apply {
             setContentView(R.layout.loading)
             setCancelable(true)
-            window?.setBackgroundDrawable("#CCFFFFFF".toColorInt().toDrawable())
+            window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
             window?.setLayout(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
         }
         val callback = object : MainActivity.VerificationCallback {

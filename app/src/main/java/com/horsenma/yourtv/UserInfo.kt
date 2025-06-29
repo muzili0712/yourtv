@@ -23,10 +23,12 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
-import java.io.IOException
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
-
+import java.io.File
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import android.content.Intent
 
 data class UserInfo(
     val userId: String = "",
@@ -88,6 +90,7 @@ object UserInfoManager {
     private const val CACHE_DURATION = 24 * 60 * 60 * 1000 // 24 小时
     private const val KEY_TEST_CODES = "test_codes"
     private const val KEY_ACTIVE_USER_ID = "active_user_id"
+    private const val KEY_LAST_CHECK_TIME = "last_check_time"
 
 
     fun initialize(context: Context) {
@@ -103,12 +106,27 @@ object UserInfoManager {
             )
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize EncryptedSharedPreferences: ${e.message}", e)
-            // 回退到普通 SharedPreferences
             this.prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         }
         loadApiKeys(context)
         loadCache()
         Log.d(TAG, "UserInfoManager initialized")
+        // 检查是否需要运行测试码过期检查
+        CoroutineScope(Dispatchers.IO).launch {
+            val lastCheckTime = prefs.getLong(KEY_LAST_CHECK_TIME, 0)
+            val currentTime = System.currentTimeMillis()
+            val checkInterval = 24 * 60 * 60 * 1000L // 24 小时
+            if (currentTime - lastCheckTime >= checkInterval) {
+                checkExpiredTestCodes()
+                with(prefs.edit()) {
+                    putLong(KEY_LAST_CHECK_TIME, currentTime)
+                    apply()
+                }
+                Log.d(TAG, "Updated last check time: $currentTime")
+            } else {
+                Log.d(TAG, "No need to check test codes, last check: $lastCheckTime, current: $currentTime")
+            }
+        }
     }
 
     fun loadApiKeys(context: Context) {
@@ -284,9 +302,9 @@ object UserInfoManager {
         }
     }
 
-    suspend fun downloadRemoteUserInfo(): Pair<List<String>, List<RemoteUserInfo>> {
+    suspend fun downloadRemoteUserInfo(forceRefresh: Boolean = false): Pair<List<String>, List<RemoteUserInfo>> {
         val cacheTime = prefs.getLong(KEY_CACHE_TIME, 0)
-        if (remoteUsersCache != null && warningMessagesCache != null && fileMappingsCache != null &&
+        if (!forceRefresh && remoteUsersCache != null && warningMessagesCache != null && fileMappingsCache != null &&
             System.currentTimeMillis() - cacheTime < CACHE_DURATION) {
             Log.d(TAG, "Hit cache: users=${remoteUsersCache!!.size}, warnings=${warningMessagesCache!!.size}, files=${fileMappingsCache!!.size}")
             return warningMessagesCache!! to remoteUsersCache!!
@@ -677,19 +695,20 @@ object UserInfoManager {
 
     fun saveTestCode(userId: String, sourceName: String) {
         val testCodes = getTestCodes().toMutableMap()
-        testCodes[userId] = sourceName
+        val cleanSourceName = sourceName.removeSuffix(".txt")
+        val filename = "$cleanSourceName.txt"
+        testCodes[userId] = cleanSourceName
         try {
             with(prefs.edit()) {
                 putString(KEY_TEST_CODES, gson.toJson(testCodes))
                 putString(KEY_ACTIVE_USER_ID, userId)
                 apply()
             }
-            // 验证保存结果
             val savedCodes = getTestCodes()
-            if (savedCodes[userId] == sourceName) {
-                Log.d(TAG, "Saved test code: userId=$userId, sourceName=$sourceName")
+            if (savedCodes[userId] == cleanSourceName) {
+                Log.d(TAG, "Saved test code: userId=$userId, sourceName=$cleanSourceName, filename=$filename")
             } else {
-                Log.e(TAG, "Failed to verify saved test code: userId=$userId, expected=$sourceName, actual=$savedCodes")
+                Log.e(TAG, "Failed to verify saved test code: userId=$userId, expected=$cleanSourceName, actual=$savedCodes")
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to save test code: userId=$userId, error=${e.message}", e)
@@ -709,6 +728,68 @@ object UserInfoManager {
 
     fun getActiveUserId(): String? {
         return prefs.getString(KEY_ACTIVE_USER_ID, null)
+    }
+
+    suspend fun checkExpiredTestCodes() {
+        Log.d(TAG, "Checking expired test codes")
+        val testCodes = getTestCodes().toMutableMap()
+        if (testCodes.isEmpty()) {
+            Log.d(TAG, "No test codes to check")
+            return
+        }
+        val remoteUsers = downloadRemoteUserInfo(forceRefresh = true).second
+        val expiredCodes = mutableListOf<String>()
+        for ((userId, sourceName) in testCodes) {
+            val isValid = validateKey(userId, remoteUsers)
+            if (isValid == null) {
+                expiredCodes.add(userId)
+                Log.w(TAG, "Test code expired: $userId, associated source: $sourceName")
+            }
+        }
+        if (expiredCodes.isNotEmpty()) {
+            val prefs = context.getSharedPreferences("SourceCache", Context.MODE_PRIVATE)
+            with(prefs.edit()) {
+                for (userId in expiredCodes) {
+                    val sourceName = testCodes[userId]
+                    // 修正文件名
+                    val filename = sourceName?.removeSuffix(".txt") + ".txt"
+                    val cacheFile = File(context.filesDir, "cache_$filename")
+                    if (cacheFile.exists()) {
+                        try {
+                            if (cacheFile.delete()) {
+                                Log.d(TAG, "Deleted cache file: cache_$filename for expired test code: $userId")
+                            } else {
+                                Log.w(TAG, "Failed to delete cache file: cache_$filename")
+                            }
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error deleting cache file: cache_$filename", e)
+                        }
+                    } else {
+                        Log.d(TAG, "Cache file not found: cache_$filename")
+                    }
+                    remove("cache_$filename")
+                    remove("cache_time_$filename")
+                    remove("url_$filename")
+                    if (prefs.getString("active_source", null) == filename) {
+                        // 设置默认源
+                        putString("active_source", "default_channels.txt")
+                        Log.d(TAG, "Set active_source to default_channels.txt for expired test code: $userId")
+                    }
+                    testCodes.remove(userId)
+                    Log.d(TAG, "Removed cache entries for expired test code: $userId, filename: $filename")
+                }
+                putString(KEY_TEST_CODES, gson.toJson(testCodes))
+                apply()
+            }
+            try {
+                val intent = Intent("com.horsenma.yourtv.TEST_CODE_EXPIRED")
+                intent.putStringArrayListExtra("expired_codes", ArrayList(expiredCodes))
+                context.sendBroadcast(intent)
+                Log.d(TAG, "Broadcast sent for expired test codes: $expiredCodes")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to send broadcast for expired test codes: ${e.message}", e)
+            }
+        }
     }
 
 }

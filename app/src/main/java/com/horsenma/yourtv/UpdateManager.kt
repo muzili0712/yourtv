@@ -43,6 +43,7 @@ import android.provider.MediaStore
 import kotlinx.coroutines.*
 
 
+
 class UpdateManager(
     private val activity: FragmentActivity,
     private val versionCode: Long
@@ -51,9 +52,8 @@ class UpdateManager(
     var release: ReleaseResponse? = null
     private val context: Context = activity
     private val sharedPrefs: SharedPreferences = activity.getSharedPreferences("UpdatePrefs", Context.MODE_PRIVATE)
-    private val apkFileName = "yourtv.apk"
     private val TAG = "UpdateManager"
-    private suspend fun getRelease(): ReleaseResponse? {
+    internal suspend fun getRelease(): ReleaseResponse? {
         val urls = Utils.getUrls(VERSION_URL).toMutableList().apply { add(VERSION_URL) }
 
         // 检查缓存
@@ -163,72 +163,103 @@ class UpdateManager(
         return null
     }
 
-    fun checkAndUpdate() {
-        Log.i(TAG, "checkAndUpdate")
+    fun checkAndUpdate(isAutoCheck: Boolean = false) {
+        Log.i(TAG, "checkAndUpdate, isAutoCheck=$isAutoCheck")
         CoroutineScope(Dispatchers.Main).launch {
-            // 创建加载对话框
-            val loadingDialog = AlertDialog.Builder(activity)
-                .setMessage("正在檢查版本...")
-                .setCancelable(false)
-                .create()
-            try {
-                loadingDialog.show()
-                // 调整加载对话框样式
-                loadingDialog.window?.let {
-                    val params = it.attributes
-                    params.width = (activity.resources.displayMetrics.widthPixels / 3)
-                    params.gravity = android.view.Gravity.CENTER
-                    it.attributes = params
-                    it.setBackgroundDrawableResource(android.R.color.transparent)
+            // 手动检查时显示加载对话框
+            var loadingDialog: AlertDialog? = null
+            if (!isAutoCheck) {
+                loadingDialog = AlertDialog.Builder(activity)
+                    .setMessage(activity.getString(R.string.checking_version))
+                    .setCancelable(false)
+                    .create()
+                try {
+                    loadingDialog.show()
+                    loadingDialog.window?.let {
+                        val params = it.attributes
+                        params.width = (activity.resources.displayMetrics.widthPixels / 3)
+                        params.gravity = android.view.Gravity.CENTER
+                        it.attributes = params
+                        it.setBackgroundDrawableResource(android.R.color.transparent)
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to show loading dialog: ${e.message}")
+                    loadingDialog?.dismiss()
                 }
+            }
 
-                var text = "版本獲取失敗"
-                var update = false
-                try {
-                    release = getRelease() // 网络请求
-                    val versionCodeFromRelease = release?.version_code
-                    val versionNameFromRelease = release?.version_name
-                    if (versionCodeFromRelease != null && versionNameFromRelease != null) {
-                        if (versionCodeFromRelease > versionCode) {
-                            text = "最新版本：$versionNameFromRelease"
-                            update = true
-                        } else {
-                            text = "已是最新版本，不需更新"
-                        }
-                    } else {
-                        Log.e(TAG, "Invalid release data")
-                        text = "版本信息無效"
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error occurred: ${e.message}")
-                    text = "版本獲取失敗"
-                }
+            try {
+                release = getRelease() // 网络请求
+                val versionCodeFromRelease = release?.version_code
+                val versionNameFromRelease = release?.version_name
                 // 关闭加载对话框
-                loadingDialog.dismiss()
-                try {
-                    updateUI(text, update, rightButtonAction = { showInstallOptions() }, defaultFocusOnLeft = false)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to show update UI: ${e.message}")
-                    activity.runOnUiThread {
-                        Toast.makeText(activity, R.string.update_failed, Toast.LENGTH_SHORT).show()
+                loadingDialog?.dismiss()
+
+                Log.i(TAG, "versionCodeFromRelease:$versionCodeFromRelease, versionCode:$versionCode ")
+                if (versionCodeFromRelease != null && versionNameFromRelease != null) {
+                    if (versionCodeFromRelease > versionCode) {
+                        Log.i(TAG, "versionCodeFromRelease:$versionCodeFromRelease, versionCode:$versionCode ")
+                        // 有新版本，显示更新提示
+                        updateUI(
+                            text = activity.getString(R.string.latest_version, versionNameFromRelease),
+                            update = true,
+                            rightButtonAction = { showInstallOptions() },
+                            defaultFocusOnLeft = false
+                        )
+                    } else if (!isAutoCheck) {
+                        // 手动检查且无新版本，显示“已是最新版本”
+                        updateUI(
+                            text = activity.getString(R.string.already_latest),
+                            update = false,
+                            leftButtonText = "",
+                            rightButtonText = activity.getString(R.string.confirm),
+                            rightButtonAction = { /* 关闭对话框 */ },
+                            defaultFocusOnLeft = false
+                        )
+                    } else {
+                        // 自动检查且无新版本，静默结束
+                        Log.i(TAG, "No new version available, versionCode=$versionCode, remote=$versionCodeFromRelease")
                     }
+                } else if (!isAutoCheck) {
+                    // 手动检查且版本信息无效，显示错误提示
+                    updateUI(
+                        text = activity.getString(R.string.invalid_version_info),
+                        update = false,
+                        leftButtonText = "",
+                        rightButtonText = activity.getString(R.string.confirm),
+                        rightButtonAction = { /* 关闭对话框 */ },
+                        defaultFocusOnLeft = false
+                    )
+                } else {
+                    // 自动检查且版本信息无效，静默结束
+                    Log.e(TAG, "Invalid release data")
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to show loading dialog: ${e.message}")
-                loadingDialog.dismiss()
-                activity.runOnUiThread {
-                    Toast.makeText(activity, R.string.update_failed, Toast.LENGTH_SHORT).show()
+                Log.e(TAG, "Error occurred during version check: ${e.message}")
+                // 关闭加载对话框
+                loadingDialog?.dismiss()
+                if (!isAutoCheck) {
+                    // 手动检查且检查失败，显示错误提示
+                    updateUI(
+                        text = activity.getString(R.string.version_fetch_failed),
+                        update = false,
+                        leftButtonText = "",
+                        rightButtonText = activity.getString(R.string.confirm),
+                        rightButtonAction = { /* 关闭对话框 */ },
+                        defaultFocusOnLeft = false
+                    )
                 }
+                // 自动检查失败，静默结束
             }
         }
     }
 
     private fun showInstallOptions() {
         updateUI(
-            text = "卸載後從下載目錄手動安裝",
+            text = activity.getString(R.string.manual_install_text),
             update = true,
-            leftButtonText = "直接更新",
-            rightButtonText = "卸載後安裝",
+            leftButtonText = activity.getString(R.string.update_direct),
+            rightButtonText = activity.getString(R.string.update_manual),
             leftButtonAction = {
                 release?.let { startDownload(it, isDirectUpdate = true) }
             },
@@ -242,19 +273,29 @@ class UpdateManager(
     private fun updateUI(
         text: String,
         update: Boolean,
-        leftButtonText: String = "取消",
-        rightButtonText: String = "更新",
+        leftButtonText: String = activity.getString(R.string.cancel),
+        rightButtonText: String = activity.getString(R.string.update),
         leftButtonAction: (() -> Unit)? = null,
         rightButtonAction: (() -> Unit)? = null,
         defaultFocusOnLeft: Boolean = true
     ) {
         activity.runOnUiThread {
             try {
+                // 隐藏 SettingFragment
+                activity.supportFragmentManager.fragments
+                    .filterIsInstance<SettingFragment>()
+                    .firstOrNull()?.let { settingFragment ->
+                        activity.supportFragmentManager.beginTransaction()
+                            .hide(settingFragment)
+                            .commitAllowingStateLoss()
+                        Log.i(TAG, "Hid SettingFragment")
+                    }
+
                 // 创建自定义按钮布局（左右排列）
                 val buttonLayout = LinearLayout(activity).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = android.view.Gravity.CENTER
-                    setPadding(20, 0, 20, 20)
+                    setPadding(20, 0, 20, 10)
                 }
 
                 // 创建左按钮（原“取消”）
@@ -266,7 +307,7 @@ class UpdateManager(
                     layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
                         setMargins(20, 0, 0, 0)
                     }
-                    var background = GradientDrawable().apply {
+                    val background = GradientDrawable().apply {
                         setColor(Color.parseColor("#80000000"))
                         cornerRadius = 8f
                         setStroke(2, Color.parseColor("#FFFFFF"))
@@ -283,7 +324,7 @@ class UpdateManager(
                     layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
                         setMargins(0, 0, 20, 0)
                     }
-                    var background = GradientDrawable().apply {
+                    val background = GradientDrawable().apply {
                         setColor(Color.parseColor("#80000000"))
                         cornerRadius = 8f
                         setStroke(2, Color.parseColor("#FFFFFF"))
@@ -327,8 +368,15 @@ class UpdateManager(
                 buttonLayout.addView(leftButton)
                 buttonLayout.addView(rightButton)
 
+                // 使用版本描述
+                val displayText = if (update && release?.description != null) {
+                    "${activity.getString(R.string.latest_version, release?.version_name)}\n${release?.description}"
+                } else {
+                    text
+                }
+
                 val dialog = AlertDialog.Builder(activity)
-                    .setMessage(text)
+                    .setMessage(displayText)
                     .setView(buttonLayout)
                     .setCancelable(true)
                     .create()
@@ -380,7 +428,7 @@ class UpdateManager(
                         dialog.dismiss()
                         onCancel()
                     }
-                }, 10000)
+                }, 20000)
 
                 // 调整对话框位置和大小
                 val window = dialog.window
@@ -388,7 +436,7 @@ class UpdateManager(
                     val params = it.attributes
                     val density = activity.resources.displayMetrics.density
                     val widthInPixels = (330 * density).toInt()
-                    val heightInPixels = (110 * density).toInt()
+                    val heightInPixels = (150 * density).toInt() // 增加高度以容纳描述
                     params.width = widthInPixels
                     params.height = heightInPixels
                     params.gravity = android.view.Gravity.TOP or android.view.Gravity.END
@@ -396,7 +444,7 @@ class UpdateManager(
                     params.y = 50
                     it.attributes = params
                     val background = GradientDrawable().apply {
-                        setColor(Color.parseColor("#D0FFFFFF"))
+                        setColor(Color.parseColor("#4D000000"))
                         cornerRadius = 16f
                         setStroke(2, Color.parseColor("#FF666666"))
                     }
@@ -406,7 +454,7 @@ class UpdateManager(
                 // 设置消息文本样式并减少上下边距
                 dialog.findViewById<TextView>(android.R.id.message)?.let { message ->
                     message.gravity = android.view.Gravity.CENTER
-                    message.setTextColor(Color.parseColor("#FF333333"))
+                    message.setTextColor(Color.parseColor("#FFFFFFFF"))
                     message.setPadding(0, 0, 0, 0)
                     message.textSize = 16f
                 }
@@ -429,6 +477,16 @@ class UpdateManager(
             }
             return
         }
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (ContextCompat.checkSelfPermission(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                Log.i(TAG, "Requesting WRITE_EXTERNAL_STORAGE permission")
+                ActivityCompat.requestPermissions(activity, arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE), 100)
+                activity.runOnUiThread {
+                    Toast.makeText(activity, R.string.grant_storage_permissions, Toast.LENGTH_LONG).show()
+                }
+                return
+            }
+        }
         CoroutineScope(Dispatchers.Main).launch {
             var progressDialog: AlertDialog? = null // 声明为可空变量
             try {
@@ -436,7 +494,7 @@ class UpdateManager(
                 if (Environment.getExternalStorageState() != Environment.MEDIA_MOUNTED) {
                     Log.e(TAG, "External storage not mounted")
                     activity.runOnUiThread {
-                        Toast.makeText(activity, "外部存儲不可用，請檢查存儲狀態", Toast.LENGTH_LONG).show()
+                        Toast.makeText(activity, R.string.external_storage_unavailable, Toast.LENGTH_LONG).show()
                     }
                     return@launch
                 }
@@ -447,7 +505,7 @@ class UpdateManager(
                     setPadding(50, 50, 50, 50)
                 }
                 val progressText = TextView(activity).apply {
-                    text = "正在下載..."
+                    text = activity.getString(R.string.is_downloading)
                     gravity = android.view.Gravity.CENTER
                     setPadding(0, 0, 0, 20)
                 }
@@ -494,7 +552,13 @@ class UpdateManager(
                 if (result.isSuccess) {
                     val apkFile = result.getOrNull()
                     activity.runOnUiThread {
-                        Toast.makeText(activity, "下載完成，準備${if (isDirectUpdate) "直接更新" else "卸載並安裝"}", Toast.LENGTH_LONG).show()
+                        val action = if (isDirectUpdate) {
+                            activity.getString(R.string.update_direct)
+                        } else {
+                            activity.getString(R.string.update_manual)
+                        }
+                        val message = activity.getString(R.string.download_ready, action)
+                        Toast.makeText(activity, message, Toast.LENGTH_LONG).show()
                     }
                     apkFile?.let {
                         Log.i(TAG, "Downloaded APK path: ${it.absolutePath}")
@@ -503,7 +567,7 @@ class UpdateManager(
                                 Log.i(TAG, "Requesting WRITE_EXTERNAL_STORAGE permission")
                                 ActivityCompat.requestPermissions(activity, arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE), 100)
                                 activity.runOnUiThread {
-                                    Toast.makeText(activity, "請授予存儲權限以繼續", Toast.LENGTH_LONG).show()
+                                    Toast.makeText(activity, R.string.grant_storage_permissions, Toast.LENGTH_LONG).show()
                                 }
                                 return@launch
                             }

@@ -1,13 +1,16 @@
 package com.horsenma.yourtv
 
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
-import android.util.Log
-import com.horsenma.yourtv.data.Source
 import com.horsenma.yourtv.data.Global
 import com.horsenma.yourtv.data.StableSource
 import androidx.core.content.edit
+import androidx.lifecycle.MutableLiveData
+import android.content.pm.PackageManager
+import android.app.UiModeManager
+import android.content.res.Configuration
 
 object SP {
     private const val TAG = "SP"
@@ -20,7 +23,6 @@ object SP {
     private const val KEY_POSITION_SUB = "position_sub"
     private const val KEY_REPEAT_INFO = "repeat_info"
     private const val KEY_CONFIG_URL = "config"
-    private const val KEY_CONFIG_AUTO_LOAD = "config_auto_load"
     private const val KEY_CHANNEL = "channel"
     private const val KEY_DEFAULT_LIKE = "default_like"
     private const val KEY_DISPLAY_SECONDS = "display_seconds"
@@ -36,15 +38,21 @@ object SP {
     private const val KEY_AUTO_SWITCH_SOURCE = "auto_switch_source"
     private const val PREF_NAME = "YourTV"
     private const val KEY_STABLE_SOURCES = "stable_sources"
-    private const val KEY_AUTO_UPDATE_SOURCES = "auto_update_sources"
     private const val KEY_SHOW_SOURCE_BUTTON = "show_source_button"
     private const val KEY_ENABLE_SCREEN_OFF_AUDIO = "enable_screen_off_audio"
     private const val KEY_ENABLE_WEBVIEW_TYPE = "enable_webview_type"
+    private const val KEY_FULL_SCREEN_MODE = "full_screen_mode"
+    private const val RESOLUTION_CACHE_PREFIX = "resolution_"
+    private const val RESOLUTION_CACHE_TIMESTAMP_PREFIX = "resolution_timestamp_"
+    private const val CACHE_DURATION = 24 * 60 * 60 * 1000L // 24 小时
+
+    // 移除静态常量，改用动态默认值
+    private var DEFAULT_SOFT_DECODE: Boolean = false
+    internal var DEFAULT_FULL_SCREEN_MODE: Boolean = true
 
     const val DEFAULT_ENABLE_WEBVIEW_TYPE = false
     const val DEFAULT_ENABLE_SCREEN_OFF_AUDIO = true
-    const val DEFAULT_SHOW_SOURCE_BUTTON = false
-    const val DEFAULT_AUTO_UPDATE_SOURCES = false
+    const val DEFAULT_SHOW_SOURCE_BUTTON = true
     const val DEFAULT_AUTO_SWITCH_SOURCE = false
     const val DEFAULT_CHANNEL_REVERSAL = false
     const val DEFAULT_CHANNEL_NUM = false
@@ -59,13 +67,12 @@ object SP {
     const val DEFAULT_COMPACT_MENU = true
     const val DEFAULT_DISPLAY_SECONDS = true
     const val DEFAULT_LOG_TIMES = 10
-    const val DEFAULT_SOFT_DECODE = false
+
 
     // 0 favorite; 1 all
     const val DEFAULT_POSITION_GROUP = 1
     const val DEFAULT_POSITION = 0
     const val DEFAULT_REPEAT_INFO = true
-    const val DEFAULT_CONFIG_AUTO_LOAD = false
     var DEFAULT_SOURCES = ""
 
     private lateinit var sp: SharedPreferences
@@ -73,54 +80,39 @@ object SP {
     private val typeSourceList = Global.typeSourceList
     private val typeStableSourceList = Global.typeStableSourceList
 
+    // 判断设备是否为触摸屏设备
+    @SuppressLint("ServiceCast")
+    private fun isTouchScreenDevice(context: Context): Boolean {
+        val packageManager = context.packageManager
+        val uiModeManager = context.getSystemService(Context.UI_MODE_SERVICE) as? UiModeManager
+        val isTv = uiModeManager?.currentModeType == Configuration.UI_MODE_TYPE_TELEVISION
+        val hasTouchScreen = packageManager.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)
+        return hasTouchScreen && !isTv
+    }
+
+    // 初始化默认值
+    private fun initDefaultValues(context: Context) {
+        DEFAULT_SOFT_DECODE = isTouchScreenDevice(context) // 触摸屏为 true，电视为 false
+        DEFAULT_FULL_SCREEN_MODE = isTouchScreenDevice(context) // 触摸屏为 true，电视为 false
+    }
+
     fun init(context: Context) {
-        sp = context.getSharedPreferences(
-            context.getString(R.string.app_name),
-            Context.MODE_PRIVATE
-        )
+        // 先初始化默认值
+        initDefaultValues(context)
 
         sp = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
 
         // 初始化 showSourceButton
         if (!sp.contains(KEY_SHOW_SOURCE_BUTTON)) {
             sp.edit(commit = true) { putBoolean(KEY_SHOW_SOURCE_BUTTON, DEFAULT_SHOW_SOURCE_BUTTON) }
-            Log.d("SP", "Initialized showSourceButton to $DEFAULT_SHOW_SOURCE_BUTTON")
-        } else {
-            val showSourceButton = sp.getBoolean(KEY_SHOW_SOURCE_BUTTON, DEFAULT_SHOW_SOURCE_BUTTON)
-            Log.d("SP", "Loaded showSourceButton: $showSourceButton")
         }
 
         if (!sp.contains(KEY_SOFT_DECODE)) {
             sp.edit(commit = true) { putBoolean(KEY_SOFT_DECODE, DEFAULT_SOFT_DECODE) }
-            Log.d("SP", "Initialized softDecode to $DEFAULT_SOFT_DECODE")
-        } else {
-            val softDecode = sp.getBoolean(KEY_SOFT_DECODE, DEFAULT_SOFT_DECODE)
-            Log.d("SP", "Loaded softDecode: $softDecode")
         }
 
-        context.resources.openRawResource(R.raw.sources).bufferedReader()
-            .use {
-                val str = it.readText()
-                if (str.isNotEmpty()) {
-                    try {
-                        val decoded = SourceDecoder.decodeHexSource(str)
-                        if (decoded != null) {
-                            DEFAULT_SOURCES = gson.toJson(
-                                decoded.trim().split("\n").map { i ->
-                                    Source(
-                                        uri = i
-                                    )
-                                }, typeSourceList
-                            ) ?: ""
-                        } else {
-                            DEFAULT_SOURCES = ""
-                        }
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Failed to decode sources: ${e.message}")
-                        DEFAULT_SOURCES = ""
-                    }
-                }
-            }
+        // 初始化 fullScreenModeLiveData
+        fullScreenModeLiveData.postValue(fullScreenMode)
     }
 
     var enableScreenOffAudio: Boolean
@@ -163,10 +155,6 @@ object SP {
         get() = sp.getString(KEY_CONFIG_URL, DEFAULT_CONFIG_URL)
         set(value) = sp.edit() { putString(KEY_CONFIG_URL, value) }
 
-    var configAutoLoad: Boolean
-        get() = sp.getBoolean(KEY_CONFIG_AUTO_LOAD, DEFAULT_CONFIG_AUTO_LOAD)
-        set(value) = sp.edit() { putBoolean(KEY_CONFIG_AUTO_LOAD, value) }
-
     var channel: Int
         get() = sp.getInt(KEY_CHANNEL, DEFAULT_CHANNEL)
         set(value) = sp.edit() { putInt(KEY_CHANNEL, value) }
@@ -188,25 +176,10 @@ object SP {
         set(value) = sp.edit() { putBoolean(KEY_DISPLAY_SECONDS, value) }
 
     var softDecode: Boolean
-        get() {
-            val value = sp.getBoolean(KEY_SOFT_DECODE, DEFAULT_SOFT_DECODE)
-            Log.d("SP", "Get softDecode: $value")
-            return value
-        }
+        get() = sp.getBoolean(KEY_SOFT_DECODE, DEFAULT_SOFT_DECODE)
         set(value) {
-            val current = sp.getBoolean(KEY_SOFT_DECODE, DEFAULT_SOFT_DECODE)
-            if (current != value) {
-                val editor = sp.edit().putBoolean(KEY_SOFT_DECODE, value)
-                val success = editor.commit()
-                if (success) {
-                    Log.d("SP", "Set softDecode to $value from $current, caller: ${Thread.currentThread().stackTrace[3]}")
-                } else {
-                    Log.e("SP", "Failed to set softDecode to $value")
-                }
-                val verify = sp.getBoolean(KEY_SOFT_DECODE, DEFAULT_SOFT_DECODE)
-                if (verify != value) {
-                    Log.e("SP", "Verification failed: softDecode is $verify, expected $value")
-                }
+            if (sp.getBoolean(KEY_SOFT_DECODE, DEFAULT_SOFT_DECODE) != value) {
+                sp.edit(commit = true) { putBoolean(KEY_SOFT_DECODE, value) }
             }
         }
 
@@ -262,10 +235,6 @@ object SP {
         get() = sp.getString(KEY_STABLE_SOURCES, null)
         set(value) = sp.edit() { putString(KEY_STABLE_SOURCES, value) }
 
-    var autoUpdateSources: Boolean
-        get() = sp.getBoolean(KEY_AUTO_UPDATE_SOURCES, DEFAULT_AUTO_UPDATE_SOURCES)
-        set(value) = sp.edit() { putBoolean(KEY_AUTO_UPDATE_SOURCES, value) }
-
     var showSourceButton: Boolean
         get() = sp.getBoolean(KEY_SHOW_SOURCE_BUTTON, DEFAULT_SHOW_SOURCE_BUTTON)
         set(value) = sp.edit() { putBoolean(KEY_SHOW_SOURCE_BUTTON, value) }
@@ -274,16 +243,30 @@ object SP {
         get() = sp.getBoolean(KEY_ENABLE_WEBVIEW_TYPE, DEFAULT_ENABLE_WEBVIEW_TYPE)
         set(value) = sp.edit() { putBoolean(KEY_ENABLE_WEBVIEW_TYPE, value) }
 
+    val fullScreenModeLiveData by lazy { MutableLiveData<Boolean>() }
+
+    var fullScreenMode: Boolean
+        get() {
+            if (!::sp.isInitialized) {
+                return DEFAULT_FULL_SCREEN_MODE // 默认值，防止未初始化时崩溃
+            }
+            return sp.getBoolean(KEY_FULL_SCREEN_MODE, DEFAULT_FULL_SCREEN_MODE)
+        }
+        set(value) {
+            if (::sp.isInitialized) {
+                sp.edit().putBoolean(KEY_FULL_SCREEN_MODE, value).apply()
+                fullScreenModeLiveData.postValue(value)
+            }
+        }
+
     fun getStableSources(): List<StableSource> {
         val json = stableSources ?: return emptyList()
         return try {
             val sources = gson.fromJson(json, typeStableSourceList) as List<StableSource>
-            // Filter out sources older than 7 days
             sources.filter {
                 System.currentTimeMillis() - it.timestamp < 7 * 24 * 60 * 60 * 1000
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to parse stable sources: ${e.message}")
             emptyList()
         }
     }
@@ -291,6 +274,28 @@ object SP {
     fun setStableSources(sources: List<StableSource>) {
         val json = gson.toJson(sources, typeStableSourceList)
         stableSources = json
+    }
+
+    fun getResolutionCache(url: String): String? {
+        val key = RESOLUTION_CACHE_PREFIX + url.hashCode()
+        val timestampKey = RESOLUTION_CACHE_TIMESTAMP_PREFIX + url.hashCode()
+        val cachedResolution = sp.getString(key, null)
+        val timestamp = sp.getLong(timestampKey, 0)
+        return if (cachedResolution != null && System.currentTimeMillis() - timestamp < CACHE_DURATION) {
+            cachedResolution
+        } else {
+            null
+        }
+    }
+
+    fun cacheResolution(url: String, resolution: String) {
+        val key = RESOLUTION_CACHE_PREFIX + url.hashCode()
+        val timestampKey = RESOLUTION_CACHE_TIMESTAMP_PREFIX + url.hashCode()
+        sp.edit().apply {
+            putString(key, resolution)
+            putLong(timestampKey, System.currentTimeMillis())
+            apply()
+        }
     }
 
 }

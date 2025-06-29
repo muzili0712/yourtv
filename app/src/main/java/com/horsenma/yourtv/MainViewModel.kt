@@ -9,14 +9,8 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.gson.JsonSyntaxException
-import com.horsenma.yourtv.ImageHelper
-import com.horsenma.yourtv.R
-import com.horsenma.yourtv.SP
 import com.horsenma.yourtv.Utils.getDateFormat
 import com.horsenma.yourtv.Utils.getUrls
-import com.horsenma.yourtv.bodyAlias
-import com.horsenma.yourtv.codeAlias
 import com.horsenma.yourtv.data.EPG
 import com.horsenma.yourtv.data.Global.gson
 import com.horsenma.yourtv.data.Global.typeEPGMap
@@ -30,29 +24,16 @@ import com.horsenma.yourtv.models.TVGroupModel
 import com.horsenma.yourtv.models.TVListModel
 import com.horsenma.yourtv.models.TVModel
 import com.horsenma.yourtv.requests.HttpClient
-import com.horsenma.yourtv.showToast
-import com.horsenma.yourtv.SourceDecoder
-import com.horsenma.yourtv.SourceEncoder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import com.horsenma.yourtv.YourTVApplication
 import java.io.File
 import java.io.InputStream
-import com.horsenma.yourtv.data.Global.typeSourceList
-import kotlinx.coroutines.withContext
-import okhttp3.Request
-import java.io.InputStreamReader
-import java.nio.charset.StandardCharsets
-import com.google.gson.JsonObject
-import android.content.SharedPreferences
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import com.horsenma.yourtv.data.StableSource
-import android.widget.Toast
 import kotlinx.coroutines.delay
-
+import com.horsenma.yourtv.data.PlayerType
+import com.horsenma.yourtv.data.Global
+import com.google.gson.reflect.TypeToken
+import com.horsenma.yourtv.data.StableSource
 
 
 class MainViewModel : ViewModel() {
@@ -87,6 +68,7 @@ class MainViewModel : ViewModel() {
     val groupModel = TVGroupModel()
     private var cacheFile: File? = null
     private var cacheChannels = ""
+    private var cacheWebChannels = ""
     private var initialized = false
 
     private lateinit var cacheEPG: File
@@ -126,13 +108,11 @@ class MainViewModel : ViewModel() {
     }
 
     fun updateConfig() {
-        if (SP.configAutoLoad) {
-            SP.configUrl?.let {
-                if (it.startsWith("http")) {
-                    viewModelScope.launch {
-                        importFromUrl(it,"")
-                        updateEPG()
-                    }
+        SP.configUrl?.let {
+            if (it.startsWith("http")) {
+                viewModelScope.launch {
+                    importFromUrl(it,"")
+                    updateEPG()
                 }
             }
         }
@@ -152,8 +132,8 @@ class MainViewModel : ViewModel() {
         imageHelper = application.imageHelper
 
         if (groupModel.getAllList() == null || groupModel.getAllList()!!.tvList.value.isNullOrEmpty()) {
-            groupModel.addTVListModel(TVListModel("我的收藏", 0))
-            groupModel.addTVListModel(TVListModel("全部頻道", 1))
+            groupModel.addTVListModel(TVListModel(context.getString(R.string.my_favorites), 0))
+            groupModel.addTVListModel(TVListModel(context.getString(R.string.all_channels), 1))
         }
 
         appDirectory = context.filesDir
@@ -194,42 +174,56 @@ class MainViewModel : ViewModel() {
                         setGroupIndex(2)
                         listIndex = 0
                     }
+
+                    // 打印 TV 数据为 JSON
+                    val tvJson = Global.gson.toJson(defaultChannel.tv)
+                    Log.d(TAG, "Stable source TV JSON: $tvJson")
+
                     groupModel.setCurrent(defaultChannel)
                     triggerPlay(defaultChannel)
                     Log.i(TAG, "Playing latest stable channel immediately: ${defaultChannel.tv.title}, url: ${defaultChannel.getVideoUrl()}")
                 } else {
                     Log.w(TAG, "Selected stable source is null")
-                    // R.string.channel_read_error.showToast()
                 }
             } else {
-                Log.w(TAG, "No stable sources available")
-                // R.string.channel_read_error.showToast()
-            }
-
-            // 同步设置 groupModel.current
-            if (defaultChannel != null) {
-                groupModel.setCurrent(defaultChannel)
-                Log.d(TAG, "Stable source set: ${defaultChannel.tv.title}, current: ${groupModel.getCurrent()?.tv?.title}")
-            } // 修改：添加二次设置和日志，确认 groupModel.current 在 str2Channels 前生效
-
-            // Step 2: Delay 3 seconds to load channels from cache or default, update list without interrupting playback
-            if (stableSources.isNotEmpty()) {
-                delay(5_000L)
-            } else {
-                delay(100L)
-            }
-            var channelsLoaded = false
-            val cacheCodeFile = File(appDirectory, CACHE_CODE_FILE)
-            if (cacheCodeFile.exists()) {
+                Log.w(TAG, "Selected stable source is null")
                 try {
-                    cachedCodeContent = cachedCodeContent ?: withContext(Dispatchers.IO) { cacheCodeFile.readText() }
-                    tryStr2Channels(cachedCodeContent!!, cacheCodeFile, "", "")
-                    Log.d(TAG, "Channels loaded from cacheCodeFile")
-                    channelsLoaded = true
+                    val inputStream = context.resources.openRawResource(R.raw.rawstablesource)
+                    val jsonString = inputStream.bufferedReader().use { it.readText() }
+                    val type = object : TypeToken<List<TV>>() {}.type
+                    val stableSources: List<TV> = Global.gson.fromJson(jsonString, type)
+                    if (stableSources.isNotEmpty()) {
+                        val tv = stableSources.random()
+                        val defaultChannel = TVModel(tv).apply {
+                            setLike(SP.getLike(tv.id))
+                            setGroupIndex(2)
+                            listIndex = 0
+                        }
+                        groupModel.setCurrent(defaultChannel)
+                        triggerPlay(defaultChannel)
+                        Log.i(TAG, "Playing random fallback stable channel from raw: ${defaultChannel.tv.title}, url: ${defaultChannel.getVideoUrl()}")
+                    } else {
+                        Log.w(TAG, "No stable sources found in rawstablesource.txt")
+                    }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Failed to load cacheCodeFile: ${e.message}", e)
+                    Log.e(TAG, "Failed to load random stable source from rawstablesource.txt: ${e.message}", e)
                 }
             }
+
+            // Step 2: Delay 5 seconds to load channels from cache or default, update list without interrupting playback
+            delay(5_000L)
+            var channelsLoaded = false
+
+            val filename = context.getSharedPreferences("SourceCache", Context.MODE_PRIVATE).getString("active_source", null)
+            if (filename != null) {
+                viewModelScope.launch {loadActiveSource()}
+                delay(3_000L)
+            }
+            if (_channelsOk.value == true) {
+                channelsLoaded = true
+                Log.d(TAG, "Channels loaded from active_source")
+            }
+
             if (!channelsLoaded && cacheFile!!.exists()) {
                 try {
                     cachedFileContent = cachedFileContent ?: withContext(Dispatchers.IO) { cacheFile!!.readText() }
@@ -249,11 +243,28 @@ class MainViewModel : ViewModel() {
                     }
                     if (cacheChannels.isNotEmpty()) {
                         tryStr2Channels(cacheChannels, null, "", "")
-                        Log.d(TAG, "Channels loaded from /raw/codechannels.txt")
+                        Log.d(TAG, "Channels loaded from /raw/channels.txt")
                         channelsLoaded = true
+                        delay(300L)
                     }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Failed to load /raw/codechannels.txt: ${e.message}", e)
+                    Log.e(TAG, "Failed to load /raw/channels.txt: ${e.message}", e)
+                }
+            }
+
+            if (!channelsLoaded) {
+                try {
+                    cacheWebChannels = withContext(Dispatchers.IO) {
+                        context.resources.openRawResource(DEFAULT_WEBCHANNELS_FILE).bufferedReader().use { it.readText() }
+                    }
+                    if (cacheWebChannels.isNotEmpty()) {
+                        tryStr2Channels(cacheWebChannels, null, "", "")
+                        Log.d(TAG, "Web channels loaded from /raw/webchannelsiniptv")
+                    } else {
+                        Log.w(TAG, "Web channels file is empty: /raw/webchannelsiniptv")
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to load /raw/webchannelsiniptv: ${e.message}", e)
                 }
             }
 
@@ -271,22 +282,6 @@ class MainViewModel : ViewModel() {
             initialized = true
             _channelsOk.value = channelsLoaded
 
-            val delayMillis = 3_000L
-            var hasScheduledDownload = false
-            channelsOk.observeForever { isInitialized ->
-                if (isInitialized && !hasScheduledDownload) {
-                    Log.d(TAG, "channelsOk: Initialized, scheduling delayed download")
-                    if (SP.autoUpdateSources || SP.getStableSources().isEmpty() || cacheFile?.exists() != true) {
-                        hasScheduledDownload = true
-                        viewModelScope.launch {
-                            Log.d(TAG, "Scheduling delayed download after ${delayMillis}ms")
-                            delay(delayMillis)
-                            Log.d(TAG, "Starting delayed download")
-                            startDelayedDownload(context)
-                        }
-                    }
-                }
-            }
         }
 
         viewModelScope.launch(Dispatchers.IO) {
@@ -301,153 +296,6 @@ class MainViewModel : ViewModel() {
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to handle EPG cache: ${e.message}", e)
-            }
-        }
-    }
-
-    private fun startDelayedDownload(context: Context) {
-        viewModelScope.launch(Dispatchers.Main) {
-            val toast = Toast.makeText(context, "正在后台下載直播源...", Toast.LENGTH_LONG)
-            toast.show()
-
-            withContext(Dispatchers.IO) {
-                try {
-                    // Load user info and remote users
-                    val userInfo = UserInfoManager.loadUserInfo()
-                    val today = SimpleDateFormat("yyyyMMdd", Locale.US).format(Date())
-                    if (userInfo != null && userInfo.userId.isNotEmpty() && userInfo.updateDate == today && userInfo.userUpdateStatus == true) {
-                        Log.d(TAG, "Today's download already completed, skipping")
-                        return@withContext
-                    }
-                    val (warningMessages, remoteUsers) = UserInfoManager.downloadRemoteUserInfo()
-
-                    if (userInfo != null && userInfo.userId.isNotEmpty()) {
-                        // Validate test code
-                        val validatedUser = UserInfoManager.validateKey(userInfo.userId, remoteUsers)
-                        if (validatedUser != null) {
-                            // Check binding
-                            val deviceId = UserInfoManager.getDeviceId()
-                            val (isValid, errorMessage) = UserInfoManager.checkBinding(userInfo.userId, deviceId)
-                            if (!isValid) {
-                                withContext(Dispatchers.Main) {
-                                    Toast.makeText(context, errorMessage ?: "测试码绑定失败", Toast.LENGTH_SHORT).show()
-                                }
-                                return@withContext
-                            }
-                            // Update binding
-                            val (bindingSuccess, bindingError) = UserInfoManager.updateBinding(userInfo.userId, deviceId)
-                            if (!bindingSuccess) {
-                                withContext(Dispatchers.Main) {
-                                    Toast.makeText(context, bindingError ?: "测试码绑定失败", Toast.LENGTH_SHORT).show()
-                                }
-                                return@withContext
-                            }
-                            // Check cacheCodeFile
-                            val cacheCodeFile = File(appDirectory, CACHE_CODE_FILE)
-                            if (cacheCodeFile.exists()) {
-                                val encryptedContent = cacheCodeFile.readText()
-                                if (encryptedContent != null) {
-                                    withContext(Dispatchers.Main) {
-                                        tryStr2Channels(encryptedContent, cacheCodeFile, "", "")
-                                        Log.d(TAG, "Channels loaded from cacheCodeFile")
-                                        Toast.makeText(context, "直播源下載完成", Toast.LENGTH_SHORT).show()
-                                        _channelsOk.value = true // Notify UI to update
-                                    }
-                                    return@withContext
-                                }
-                            }
-
-                            // Download from vipUserUrl
-                            if (validatedUser.vipUserUrl.isNotEmpty()) {
-                                importFromUrl(validatedUser.vipUserUrl, skipHistory = true)
-                                if (listModel.isNotEmpty()) {
-                                    val encryptedContent = SourceEncoder.encodeJsonSource(cacheChannels)
-                                    cacheCodeFile.writeText(encryptedContent)
-                                    val updatedUserInfo = UserInfo(
-                                        userId = userInfo.userId,
-                                        userLimitDate = validatedUser.userLimitDate,
-                                        userType = validatedUser.userType,
-                                        vipUserUrl = validatedUser.vipUserUrl,
-                                        maxDevices = validatedUser.maxDevices,
-                                        devices = validatedUser.devices,
-                                        userUpdateStatus = true,
-                                        updateDate = today
-                                    )
-                                    UserInfoManager.saveUserInfo(updatedUserInfo)
-                                    withContext(Dispatchers.Main) {
-                                        Log.d(TAG, "Channels loaded from vipUserUrl: ${validatedUser.vipUserUrl}")
-                                        Toast.makeText(context, "直播源下載完成", Toast.LENGTH_SHORT).show()
-                                        _channelsOk.value = true // Notify UI to update
-                                    }
-                                    return@withContext
-                                }
-                            }
-                        }
-                    }
-
-                    // Try SP.sources
-                    val sourcesJson = SP.sources
-                    if (!sourcesJson.isNullOrEmpty()) {
-                        val sourceUrls = try {
-                            val sourceList = gson.fromJson(sourcesJson, typeSourceList) as? List<Source>
-                            if (sourceList != null) {
-                                sourceList.mapNotNull { it.uri.takeIf { it.isNotBlank() } }
-                            } else {
-                                sourcesJson.trim().split("\n", ",")
-                                    .map { it.trim() }
-                                    .filter { it.isNotBlank() && (it.startsWith("http://") || it.startsWith("https://")) }
-                            }
-                        } catch (e: Exception) {
-                            Log.w(TAG, "Failed to parse SP.sources: ${e.message}", e)
-                            sourcesJson.trim().split("\n", ",")
-                                .map { it.trim() }
-                                .filter { it.isNotBlank() && (it.startsWith("http://") || it.startsWith("https://")) }
-                        }
-                        for (url in sourceUrls) {
-                            if (url.isNotBlank()) {
-                                try {
-                                    importFromUrl(url, "")
-                                    if (listModel.isNotEmpty()) {
-                                        cacheChannels = listModel.joinToString("\n") { it.tv.toString() }
-                                        val updatedUserInfo = UserInfo(
-                                            userId = userInfo?.userId ?: "testuser",
-                                            userLimitDate = userInfo?.userLimitDate ?: "19700101",
-                                            userType = userInfo?.userType ?: "",
-                                            vipUserUrl = userInfo?.vipUserUrl ?: "",
-                                            maxDevices = userInfo?.maxDevices ?: 5,
-                                            devices = userInfo?.devices ?: emptyList(),
-                                            userUpdateStatus = true,
-                                            updateDate = today
-                                        )
-                                        UserInfoManager.saveUserInfo(updatedUserInfo)
-                                        withContext(Dispatchers.Main) {
-                                            Log.d(TAG, "Channels loaded from SP.sources: $url")
-                                            Toast.makeText(context, "直播源下載完成", Toast.LENGTH_SHORT).show()
-                                            _channelsOk.value = true // Notify UI to update
-                                        }
-                                        return@withContext
-                                    }
-                                } catch (e: Exception) {
-                                    Log.w(TAG, "Failed to import from URL $url: ${e.message}", e)
-                                }
-                            }
-                        }
-                    }
-
-                    withContext(Dispatchers.Main) {
-                        Log.w(TAG, "All remote sources failed, retaining init's listModel")
-                        Toast.makeText(context, "直播源下載失敗，保留本地源", Toast.LENGTH_SHORT).show()
-                        _channelsOk.value = true // Ensure UI updates even on failure
-                    }
-                } catch (e: Exception) {
-                    withContext(Dispatchers.Main) {
-                        Log.e(TAG, "Failed to load remote sources: ${e.message}", e)
-                        Toast.makeText(context, "直播源下載失敗", Toast.LENGTH_SHORT).show()
-                        _channelsOk.value = true // Ensure UI updates even on failure
-                    }
-                } finally {
-                    toast.cancel()
-                }
             }
         }
     }
@@ -562,8 +410,8 @@ class MainViewModel : ViewModel() {
         return success
     }
 
-    suspend fun importFromUrl(url: String, id: String = "", skipHistory: Boolean = false) {
-        Log.d(TAG, "importFromUrl: url=$url, id=$id, skipHistory=$skipHistory")
+    suspend fun importFromUrl(url: String, id: String = "", skipHistory: Boolean = false, forceDownload: Boolean = false) {
+        Log.d(TAG, "importFromUrl: url=$url, id=$id, skipHistory=$skipHistory, forceDownload=$forceDownload")
         if (url.isBlank()) {
             Log.w(TAG, "importFromUrl: Skipping empty URL")
             R.string.sources_download_error.showToast()
@@ -581,20 +429,59 @@ class MainViewModel : ViewModel() {
         val cacheTime = prefs.getLong(cacheTimeKey, 0)
         val cacheDuration = 24 * 60 * 60 * 1000
         val cacheCodeFile = File(appDirectory, "cache_$filename")
-        val cacheUseFile = File(appDirectory, CACHE_CODE_FILE)
+        val MAX_CACHE_FILES = 10
 
-        // 检查缓存
-        if (cachedContent != null && System.currentTimeMillis() - cacheTime < cacheDuration && cacheCodeFile.exists()) {
-            Log.d(TAG, "importFromUrl: Using cached content for filename=$filename, cacheTime=$cacheTime")
-            withContext(Dispatchers.IO) {
-                cacheCodeFile.writeText(cachedContent)
+        // 检查缓存文件数量并清理
+        val cacheKeys = prefs.all.keys.filter { it.startsWith("cache_") && !it.startsWith("cache_time_") }
+        if (cacheKeys.size >= MAX_CACHE_FILES) {
+            val timeKeys = prefs.all.entries
+                .filter { it.key.startsWith("cache_time_") }
+                .map { it.key to (it.value as? Long ?: 0L) }
+                .sortedBy { it.second }
+            if (timeKeys.isNotEmpty()) {
+                val oldestTimeKey = timeKeys.first().first
+                val oldestFilename = oldestTimeKey.removePrefix("cache_time_")
+                val oldestCacheKey = "cache_$oldestFilename"
+                val oldestUrlKey = "url_$oldestFilename"
+                val oldestCacheFile = File(appDirectory, "cache_$oldestFilename")
+                if (oldestCacheFile.exists()) {
+                    oldestCacheFile.delete()
+                    Log.d(TAG, "Deleted oldest cache file: cache_$oldestFilename")
+                }
+                viewModelScope.launch(Dispatchers.IO) {
+                    with(prefs.edit()) {
+                        remove(oldestCacheKey)
+                        remove(oldestTimeKey)
+                        remove(oldestUrlKey)
+                        apply()
+                    }
+                }
+                Log.d(TAG, "Removed oldest cache entries: $oldestCacheKey, $oldestTimeKey, $oldestUrlKey")
             }
-            withContext(Dispatchers.Main) {
+        }
+
+        // 检查缓存，并更新时间戳
+        if (!forceDownload && cachedContent != null && cacheCodeFile.exists() ) {
+            Log.d(TAG, "importFromUrl: Using cached content for filename=$filename, cacheTime=$cacheTime")
+            viewModelScope.launch(Dispatchers.IO) {
+                with(prefs.edit()) {
+                    putLong("cache_time_$filename", System.currentTimeMillis())
+                    putString("active_source", filename)
+                    apply()
+                }
+            }
+            // 在主线程解析频道列表，确保 LiveData 操作安全
+            viewModelScope.launch(Dispatchers.Main) {
                 val isHex = cachedContent.trim().matches(Regex("^[0-9a-fA-F]+$"))
-                val contentToParse = if (isHex) SourceDecoder.decodeHexSource(cachedContent) ?: cachedContent else cachedContent
+                val contentToParse = if (isHex) {
+                    withContext(Dispatchers.IO) { // 解码操作在 IO 线程
+                        SourceDecoder.decodeHexSource(cachedContent) ?: cachedContent
+                    }
+                } else {
+                    cachedContent
+                }
                 tryStr2Channels(contentToParse, cacheCodeFile, if (skipHistory) "" else url, id)
                 _channelsOk.value = true
-                prefs.edit().putString("active_source", filename).apply()
             }
             return
         }
@@ -623,7 +510,6 @@ class MainViewModel : ViewModel() {
                 withContext(Dispatchers.IO) {
                     try {
                         cacheCodeFile.writeText(contentToCache)
-                        cacheUseFile.writeText(contentToCache)
                         Log.d(TAG, "importFromUrl: Wrote cache_$filename for filename=$filename, content length=${contentToCache.length}")
                     } catch (e: Exception) {
                         Log.e(TAG, "importFromUrl: Failed to write cache_$filename: ${e.message}")
@@ -632,12 +518,14 @@ class MainViewModel : ViewModel() {
                 withContext(Dispatchers.Main) {
                     tryStr2Channels(normalizedContent, cacheCodeFile, if (skipHistory) "" else url, id)
                     SP.lastDownloadTime = System.currentTimeMillis()
-                    with(prefs.edit()) {
-                        putString(cacheKey, contentToCache)
-                        putLong(cacheTimeKey, System.currentTimeMillis())
-                        putString(urlKey, url)
-                        putString("active_source", filename)
-                        apply()
+                    viewModelScope.launch(Dispatchers.IO) {
+                        with(prefs.edit()) {
+                            putString(cacheKey, contentToCache)
+                            putLong(cacheTimeKey, System.currentTimeMillis())
+                            putString(urlKey, url)
+                            putString("active_source", filename)
+                            apply()
+                        }
                     }
                     Log.d(TAG, "importFromUrl: Cached content for filename=$filename, isHex=$isHex")
                     _channelsOk.value = true
@@ -664,10 +552,12 @@ class MainViewModel : ViewModel() {
         }
 
         try {
-            with(prefs.edit()) {
-                putString("active_source", filename)
-                putString("url_$filename", defaultUrl)
-                apply()
+            viewModelScope.launch(Dispatchers.IO) {
+                with(prefs.edit()) {
+                    putString("active_source", filename)
+                    putString("url_$filename", defaultUrl)
+                    apply()
+                }
             }
             str2Channels(str)
             Log.d(TAG, "reset: Processed default channels from R.raw.channels")
@@ -705,9 +595,10 @@ class MainViewModel : ViewModel() {
         try {
             if (str.isEmpty()) {
                 Log.w(TAG, "Input string is empty for url=$url")
-                R.string.channel_import_error.showToast()
+                R.string.channel_read_error.showToast()
                 return
             }
+            //context.getString(R.string.Loading_live_source_channels).showToast()
             val isPlainText = str.trim().startsWith("#EXTM3U") ||
                     str.trim().startsWith("http://") ||
                     str.trim().startsWith("https://")
@@ -718,12 +609,16 @@ class MainViewModel : ViewModel() {
                 if (isPlainText) {
                     val encryptedStr = SourceEncoder.encodeJsonSource(str)
                     if (targetFile != null) {
-                        targetFile.writeText(encryptedStr)
+                        viewModelScope.launch(Dispatchers.IO) {
+                            targetFile.writeText(encryptedStr)
+                        }
                     }
                     cacheChannels = str
                 } else if (isHex) {
                     if (targetFile != null) {
-                        targetFile.writeText(str)
+                        viewModelScope.launch(Dispatchers.IO) {
+                            targetFile.writeText(str)
+                        }
                     }
                     val decryptedStr = SourceDecoder.decodeHexSource(str) ?: str
                     cacheChannels = decryptedStr
@@ -732,7 +627,9 @@ class MainViewModel : ViewModel() {
                         val decodedStr = SourceDecoder.decodeHexSource(str) ?: str
                         val encryptedStr = SourceEncoder.encodeJsonSource(decodedStr)
                         if (targetFile != null) {
-                            targetFile.writeText(encryptedStr)
+                            viewModelScope.launch(Dispatchers.IO) {
+                                targetFile.writeText(encryptedStr)
+                            }
                         }
                         cacheChannels = decodedStr
                     } catch (e: Exception) {
@@ -741,17 +638,18 @@ class MainViewModel : ViewModel() {
                     }
                 }
                 if (url.isNotEmpty()) {
-                    SP.configUrl = url
+                    com.horsenma.yourtv.SP.configUrl = url
                     val source = Source(id = id, uri = url)
-                    sources.addSource(source)
-                    Log.d(TAG, "tryStr2Channels: Added source: $source, SP.sources: ${SP.sources}")
+                    viewModelScope.launch(Dispatchers.Main) { // 切换到主线程更新 Sources LiveData
+                        sources.addSource(source)
+                        Log.d(TAG, "tryStr2Channels: Added source: $source, SP.sources: ${source}")
+                    }
                 }
                 viewModelScope.launch {
                     withContext(Dispatchers.Main) {
                         _channelsOk.value = true
                     }
                 }
-                R.string.channel_import_success.showToast()
             } else {
                 Log.w(TAG, "str2Channels failed for url=$url")
                 R.string.channel_import_error.showToast()
@@ -773,25 +671,20 @@ class MainViewModel : ViewModel() {
             return false
         }
 
+        R.string.parsing_live_source.showToast()
+
         var string = str
         val isPlainText = str.trim().startsWith("#EXTM3U") ||
                 str.trim().startsWith("http://") ||
                 str.trim().startsWith("https://")
         val isHex = str.trim().matches(Regex("^[0-9a-fA-F]+$"))
 
-        Log.d(TAG, "str2Channels: isPlainText=$isPlainText, isHex=$isHex, str length=${str.length}, sample=${str.take(50)}")
+        Log.d(TAG, "str2Channels: isPlainText=$isPlainText, isHex=$isHex, str length=${str.length}")
 
         try {
             if (isHex) {
-                val decoded = SourceDecoder.decodeHexSource(str)
-                if (decoded != null) {
-                    string = decoded
-                    Log.d(TAG, "str2Channels: Decoded HEX, new string length=${string.length}, sample=${string.take(50)}")
-                } else {
-                    Log.w(TAG, "str2Channels: Failed to decode HEX, using original string")
-                }
-            } else if (isPlainText) {
-                string = str
+                string = SourceDecoder.decodeHexSource(str) ?: str
+                Log.d(TAG, "str2Channels: Decoded HEX, new string length=${string.length}")
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to decode string: ${e.message}")
@@ -805,242 +698,361 @@ class MainViewModel : ViewModel() {
         val currentTvTitle = groupModel.getCurrent()?.tv?.title
         Log.d(TAG, "str2Channels: Saving currentTvTitle=$currentTvTitle")
 
-        val isStableSourcePlaying = SP.getStableSources().isNotEmpty() && groupModel.current.value != null
+        // 分流：提取 webview:// 地址
+        val lines = string.split("\n", "\r\n", "\r").filter { it.isNotBlank() }
+        val webviewTVs = mutableListOf<com.horsenma.mytv1.data.TV>()
+        val iptvLines = mutableListOf<String>()
+        var currentTV: com.horsenma.mytv1.data.TV? = null
 
-        val list: List<TV> = when (string[0]) {
-            '[' -> {
-                try {
-                    gson.fromJson(string, typeTvList) ?: emptyList()
-                } catch (e: Exception) {
-                    Log.e(TAG, "str2Channels JSON parsing failed: ${e.message}")
-                    return false
+        for (line in lines) {
+            val trimmedLine = line.trim()
+            if (trimmedLine.isEmpty()) continue
+
+            if (trimmedLine.startsWith("#EXTM3U")) {
+                iptvLines.add(trimmedLine)
+                val epgIndex = trimmedLine.indexOf("x-tvg-url=\"")
+                if (epgIndex != -1) {
+                    val endIndex = trimmedLine.indexOf("\"", epgIndex + 11)
+                    if (endIndex != -1) epgUrl = trimmedLine.substring(epgIndex + 11, endIndex)
                 }
-            }
-            '#' -> {
-                // 尝试多种分行方式
-                val lines = string.split("\n", "\r\n", "\r").filter { it.isNotBlank() }
-                Log.d(TAG, "str2Channels: Parsing M3U, line count=${lines.size}, first lines=${lines.take(5).joinToString("|")}")
-                val tvMap = mutableMapOf<String, MutableList<TV>>()
-                var currentTV: TV? = null
+            } else if (trimmedLine.startsWith("#EXTINF")) {
+                iptvLines.add(trimmedLine)
+                currentTV = com.horsenma.mytv1.data.TV(uris = emptyList(), block = null)
+                val info = trimmedLine.split(",", limit = 2)
+                if (info.size < 2) {
+                    Log.w(TAG, "Invalid #EXTINF line: $trimmedLine")
+                    currentTV = null
+                    continue
+                }
+                currentTV = currentTV.copy(title = info.last().trim(), name = info.last().trim())
 
-                for (line in lines) {
-                    val trimmedLine = line.trim()
-                    if (trimmedLine.isEmpty()) continue
+                val extinf = info.first()
+                val nameStart = extinf.indexOf("tvg-name=\"") + 10
+                val nameEnd = extinf.indexOf("\"", nameStart)
+                currentTV = currentTV.copy(
+                    name = if (nameStart > 9 && nameEnd > nameStart) {
+                        extinf.substring(nameStart, nameEnd)
+                    } else {
+                        currentTV.title
+                    }
+                )
 
-                    // Log.d(TAG, "str2Channels: Processing line: ${trimmedLine.take(500)}")
+                val logoStart = extinf.indexOf("tvg-logo=\"") + 10
+                val logoEnd = extinf.indexOf("\"", logoStart)
+                currentTV = currentTV.copy(
+                    logo = if (logoStart > 9 && logoEnd > logoStart) {
+                        extinf.substring(logoStart, logoEnd)
+                    } else {
+                        ""
+                    }
+                )
 
-                    if (trimmedLine.startsWith("#EXTM3U")) {
-                        val epgIndex = trimmedLine.indexOf("x-tvg-url=\"")
-                        if (epgIndex != -1) {
-                            val endIndex = trimmedLine.indexOf("\"", epgIndex + 11)
-                            if (endIndex != -1) epgUrl = trimmedLine.substring(epgIndex + 11, endIndex)
-                        }
-                    } else if (trimmedLine.startsWith("#EXTINF")) {
-                        if (currentTV != null && currentTV.uris.isNotEmpty()) {
-                            val key = (currentTV.group + currentTV.name).ifEmpty { currentTV.title }
-                            tvMap.computeIfAbsent(key) { mutableListOf() }.add(currentTV)
-                        }
-                        currentTV = TV()
-                        val info = trimmedLine.split(",", limit = 2)
-                        if (info.size < 2) {
-                            Log.w(TAG, "str2Channels: Invalid #EXTINF line: $trimmedLine")
-                            currentTV = null
-                            continue
-                        }
-                        currentTV = currentTV.copy(title = info.last().trim())
-
-                        val extinf = info.first()
-                        val nameStart = extinf.indexOf("tvg-name=\"") + 10
-                        val nameEnd = extinf.indexOf("\"", nameStart)
-                        currentTV = currentTV.copy(
-                            name = if (nameStart > 9 && nameEnd > nameStart) {
-                                extinf.substring(nameStart, nameEnd)
-                            } else {
-                                currentTV.title
-                            }
-                        )
-
-                        val logoStart = extinf.indexOf("tvg-logo=\"") + 10
-                        val logoEnd = extinf.indexOf("\"", logoStart)
-                        currentTV = currentTV.copy(
-                            logo = if (logoStart > 9 && logoEnd > logoStart) {
-                                extinf.substring(logoStart, logoEnd)
-                            } else {
-                                ""
-                            }
-                        )
-
-                        val numStart = extinf.indexOf("tvg-chno=\"") + 10
-                        val numEnd = extinf.indexOf("\"", numStart)
-                        currentTV = currentTV.copy(
-                            number = if (numStart > 9 && numEnd > numStart) {
-                                extinf.substring(numStart, numEnd).toIntOrNull() ?: -1
-                            } else {
-                                -1
-                            }
-                        )
-
-                        val groupStart = extinf.indexOf("group-title=\"") + 13
-                        val groupEnd = extinf.indexOf("\"", groupStart)
-                        currentTV = currentTV.copy(
-                            group = if (groupStart > 12 && groupEnd > groupStart) {
-                                extinf.substring(groupStart, groupEnd)
-                            } else {
-                                ""
-                            }
-                        )
-                    } else if (trimmedLine.startsWith("#EXTVLCOPT:http-")) {
-                        if (currentTV != null) {
-                            val keyValue = trimmedLine.substringAfter("#EXTVLCOPT:http-").split("=", limit = 2)
-                            if (keyValue.size == 2) {
-                                currentTV = currentTV.copy(
-                                    headers = (currentTV.headers ?: emptyMap()).toMutableMap().apply {
-                                        this[keyValue[0]] = keyValue[1]
-                                    }
-                                )
-                            }
-                        }
-                    } else if (!trimmedLine.startsWith("#") && currentTV != null) {
-                        currentTV = currentTV.copy(
-                            uris = currentTV.uris.toMutableList().apply { add(trimmedLine) }
-                        )
+                val groupStart = extinf.indexOf("group-title=\"") + 13
+                val groupEnd = extinf.indexOf("\"", groupStart)
+                currentTV = currentTV.copy(
+                    group = if (groupStart > 12 && groupEnd > groupStart) {
+                        extinf.substring(groupStart, groupEnd)
+                    } else {
+                        ""
+                    }
+                )
+            } else if (trimmedLine.startsWith("webview://") && currentTV != null) {
+                val url = trimmedLine.removePrefix("webview://")
+                val domain = Uri.parse(url).host ?: ""
+                // 读取 webview_loading_blacklist.json（缓存结果）
+                val blacklistMap: Map<String, List<String>> by lazy {
+                    try {
+                        val jsonText = context.assets.open("webview_loading_blacklist.json").bufferedReader().use { it.readText() }
+                        Global.gson.fromJson(jsonText, object : TypeToken<Map<String, List<String>>>() {}.type)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to read webview_loading_blacklist.json: ${e.message}")
+                        emptyMap()
                     }
                 }
-
-                if (currentTV != null && currentTV.uris.isNotEmpty()) {
-                    val key = (currentTV.group + currentTV.name).ifEmpty { currentTV.title }
-                    tvMap.computeIfAbsent(key) { mutableListOf() }.add(currentTV)
-                }
-
-                val tvList = tvMap.values.map { tvs ->
-                    val uris = tvs.flatMap { it.uris }.distinct()
-                    TV(
-                        id = -1,
-                        name = tvs[0].name,
-                        title = tvs[0].title,
-                        description = null,
-                        logo = tvs[0].logo,
-                        image = null,
-                        uris = uris,
-                        videoIndex = 0,
-                        headers = tvs[0].headers,
-                        group = tvs[0].group,
-                        sourceType = SourceType.UNKNOWN,
-                        number = tvs[0].number,
-                        child = emptyList()
-                    )
-                }.filter { it.uris.isNotEmpty() }
-                Log.d(TAG, "str2Channels: Generated TV list size=${tvList.size}")
-                tvList
-            }
-            else -> {
-                val lines = string.split("\n", "\r\n", "\r").filter { it.isNotBlank() }
-                Log.d(TAG, "str2Channels: Parsing other format, line count=${lines.size}")
-                val tvMap = mutableMapOf<String, TV>()
-                var group = ""
-
-                for (line in lines) {
-                    val trimmedLine = line.trim()
-                    if (trimmedLine.isEmpty()) continue
-                    if (trimmedLine.contains("#genre#")) {
-                        group = trimmedLine.split(',', limit = 2)[0].trim()
-                    } else if (trimmedLine.contains(",")) {
-                        val arr = trimmedLine.split(',', limit = 2)
-                        val title = arr[0].trim()
-                        val uri = arr[1].trim()
-                        val key = group + title
-                        tvMap.compute(key) { _, existing ->
-                            existing?.copy(uris = existing.uris.toMutableList().apply { add(uri) })
-                                ?: TV(
-                                    id = -1,
-                                    name = "",
-                                    title = title,
-                                    description = null,
-                                    logo = "",
-                                    image = null,
-                                    uris = listOf(uri),
-                                    videoIndex = 0,
-                                    headers = emptyMap(),
-                                    group = group,
-                                    sourceType = SourceType.UNKNOWN,
-                                    number = -1,
-                                    child = emptyList()
-                                )
-                        }
-                    }
-                }
-                val tvList = tvMap.values.toList()
-                Log.d(TAG, "str2Channels: Generated TV list size=${tvList.size}")
-                tvList
+                // 从 Global.blockMap 或 blacklistMap 获取屏蔽列表
+                val blockList = Global.blockMap[currentTV.group]
+                    ?: blacklistMap.entries.find { it.key == domain || domain.endsWith(".${it.key}") }?.value
+                    ?: listOf("ad.js", "banner.css")
+                currentTV = currentTV.copy(
+                    uris = listOf(url),
+                    block = blockList,
+                    id = url.hashCode(),
+                    started = "document.querySelector('.floatNav').style.display = 'none'",
+                    script = "", // 移除脚本设置，依赖 WebFragment 的 scriptMap
+                    selector = "",
+                    finished = ""
+                )
+                webviewTVs.add(currentTV)
+                currentTV = null
+            } else if (!trimmedLine.startsWith("#") && currentTV != null) {
+                iptvLines.add(trimmedLine)
+                currentTV = null
             }
         }
 
-        if (list.isEmpty()) {
+        // 处理 WebView 直播源
+        val webviewModels = mutableListOf<TVModel>()
+        if (webviewTVs.isNotEmpty()) {
+            try {
+                Log.d(TAG, "str2Channels: Found ${webviewTVs.size} WebView channels")
+                // 按 group + name 去重 WebView 频道
+                val webviewMap = mutableMapOf<String, MutableList<com.horsenma.mytv1.data.TV>>()
+                for (tv in webviewTVs) {
+                    val key = (tv.group.orEmpty() + tv.name.orEmpty()).ifEmpty { tv.title.orEmpty() }
+                    webviewMap.computeIfAbsent(key) { mutableListOf() }.add(tv)
+                }
+                webviewModels.addAll(webviewMap.values.mapIndexed { index, tvs ->
+                    val uris = tvs.flatMap { it.uris }.distinct()
+                    TVModel(
+                        com.horsenma.yourtv.data.TV(
+                            id = tvs[0].id ?: -1,
+                            name = tvs[0].name.orEmpty(),
+                            title = tvs[0].title.orEmpty(),
+                            logo = tvs[0].logo.orEmpty(),
+                            uris = uris,
+                            group = tvs[0].group.orEmpty(),
+                            playerType = PlayerType.WEBVIEW,
+                            block = tvs[0].block.orEmpty(),
+                            script = tvs[0].script.orEmpty(),
+                            selector = tvs[0].selector.orEmpty(),
+                            started = tvs[0].started.orEmpty(),
+                            finished = tvs[0].finished.orEmpty(),
+                            headers = emptyMap(), // 避免 headers 类型不匹配
+                            description = null,
+                            image = null,
+                            videoIndex = 0,
+                            sourceType = SourceType.UNKNOWN,
+                            number = -1, // 统一设置为 -1，与原逻辑一致
+                            child = emptyList()
+                        )
+                    ).apply {
+                        setLike(SP.getLike(tvs[0].id ?: -1))
+                        setGroupIndex(2)
+                        listIndex = index
+                    }
+                })
+                Log.d(TAG, "str2Channels: Parsed ${webviewModels.size} WebView channels")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to parse WebView channels: ${e.message}")
+            }
+        }
+
+        // 处理 IPTV 直播源
+        val iptvList: List<TV> = if (iptvLines.isNotEmpty()) {
+            val iptvContent = iptvLines.joinToString("\n")
+            when {
+                iptvContent.startsWith("[") -> {
+                    try {
+                        gson.fromJson(iptvContent, typeTvList) ?: emptyList()
+                    } catch (e: Exception) {
+                        Log.e(TAG, "IPTV JSON parsing failed: ${e.message}")
+                        emptyList()
+                    }
+                }
+                iptvContent.startsWith("#") -> {
+                    val tvMap = mutableMapOf<String, MutableList<TV>>()
+                    var currentTV: TV? = null
+                    for (line in iptvLines) {
+                        val trimmedLine = line.trim()
+                        if (trimmedLine.isEmpty()) continue
+
+                        if (trimmedLine.startsWith("#EXTM3U")) {
+                            continue
+                        } else if (trimmedLine.startsWith("#EXTINF")) {
+                            var lastKey: String? = null // 跟踪上一个频道的 key
+                            if (currentTV != null && currentTV.uris.isNotEmpty()) {
+                                val key = (currentTV.group + currentTV.name).ifEmpty { currentTV.title }
+                                if (key != lastKey) {
+                                    tvMap.computeIfAbsent(key) { mutableListOf() }.add(currentTV)
+                                    lastKey = key
+                                } else {
+                                    tvMap[key]?.last()?.uris?.toMutableList()?.addAll(currentTV.uris)
+                                }
+                            }
+                            currentTV = TV()
+                            val info = trimmedLine.split(",", limit = 2)
+                            if (info.size < 2) continue
+                            currentTV = currentTV.copy(title = info.last().trim())
+
+                            val extinf = info.first()
+                            val nameStart = extinf.indexOf("tvg-name=\"") + 10
+                            val nameEnd = extinf.indexOf("\"", nameStart)
+                            currentTV = currentTV.copy(
+                                name = if (nameStart > 9 && nameEnd > nameStart) {
+                                    extinf.substring(nameStart, nameEnd)
+                                } else {
+                                    currentTV.title
+                                }
+                            )
+
+                            val logoStart = extinf.indexOf("tvg-logo=\"") + 10
+                            val logoEnd = extinf.indexOf("\"", logoStart)
+                            currentTV = currentTV.copy(
+                                logo = if (logoStart > 9 && logoEnd > logoStart) {
+                                    extinf.substring(logoStart, logoEnd)
+                                } else {
+                                    ""
+                                }
+                            )
+
+                            val numStart = extinf.indexOf("tvg-chno=\"") + 10
+                            val numEnd = extinf.indexOf("\"", numStart)
+                            currentTV = currentTV.copy(
+                                number = if (numStart > 9 && numEnd > numStart) {
+                                    extinf.substring(numStart, numEnd).toIntOrNull() ?: -1
+                                } else {
+                                    -1
+                                }
+                            )
+
+                            val groupStart = extinf.indexOf("group-title=\"") + 13
+                            val groupEnd = extinf.indexOf("\"", groupStart)
+                            currentTV = currentTV.copy(
+                                group = if (groupStart > 12 && groupEnd > groupStart) {
+                                    extinf.substring(groupStart, groupEnd)
+                                } else {
+                                    ""
+                                }
+                            )
+                        } else if (trimmedLine.startsWith("#EXTVLCOPT:http-")) {
+                            if (currentTV != null) {
+                                val keyValue = trimmedLine.substringAfter("#EXTVLCOPT:http-").split("=", limit = 2)
+                                if (keyValue.size == 2) {
+                                    currentTV = currentTV.copy(
+                                        headers = (currentTV.headers ?: emptyMap()).toMutableMap().apply {
+                                            this[keyValue[0]] = keyValue[1]
+                                        }
+                                    )
+                                }
+                            }
+                        } else if (!trimmedLine.startsWith("#") && currentTV != null) {
+                            currentTV = currentTV.copy(
+                                uris = currentTV.uris.toMutableList().apply { add(trimmedLine) }
+                            )
+                        }
+                    }
+
+                    var lastKey: String? = null // 跟踪上一个频道的 key
+                    if (currentTV != null && currentTV.uris.isNotEmpty()) {
+                        val key = (currentTV.group + currentTV.name).ifEmpty { currentTV.title }
+                        if (key != lastKey) {
+                            tvMap.computeIfAbsent(key) { mutableListOf() }.add(currentTV)
+                            lastKey = key
+                        } else {
+                            tvMap[key]?.last()?.uris?.toMutableList()?.addAll(currentTV.uris)
+                        }
+                    }
+
+                    tvMap.values.map { tvs ->
+                        val uris = tvs.flatMap { it.uris }.distinct()
+                        TV(
+                            id = -1,
+                            name = tvs[0].name,
+                            title = tvs[0].title,
+                            description = null,
+                            logo = tvs[0].logo,
+                            image = null,
+                            uris = uris,
+                            videoIndex = 0,
+                            headers = tvs[0].headers,
+                            group = tvs[0].group,
+                            sourceType = SourceType.UNKNOWN,
+                            number = tvs[0].number,
+                            child = emptyList(),
+                            playerType = PlayerType.IPTV
+                        )
+                    }.filter { it.uris.isNotEmpty() }
+                }
+                else -> emptyList()
+            }
+        } else {
+            emptyList()
+        }
+
+        if (iptvList.isEmpty() && webviewModels.isEmpty()) {
             Log.w(TAG, "str2Channels: Parsed TV list is empty")
             return false
         }
 
-        //if (!isStableSourcePlaying) {
-            groupModel.setTVListModelList(listOf(
-                TVListModel("我的收藏", 0),
-                TVListModel("全部頻道", 1)
-            ))
-        //}
+        // 合并 IPTV 和 WebView 频道
+        viewModelScope.launch(Dispatchers.Main) {
+            groupModel.setTVListModelList(
+                listOf(
+                    TVListModel(context.getString(R.string.my_favorites), 0),
+                    TVListModel(context.getString(R.string.all_channels), 1)
+                )
+            )
 
-        groupModel.tvGroupValue.forEach { it.initTVList() }
-
-        val listModelNew = mutableListOf<TVModel>()
-        var id = 0
-        list.forEach { tv ->
-            val group = tv.group.ifEmpty { "未知" }
-            val tvModel = TVModel(tv).apply {
-                tv.id = id
-                setLike(SP.getLike(id))
-                setGroupIndex(2)
-                listIndex = listModelNew.size
+            // 生成 IPTV TVModel
+            val iptvModels = iptvList.mapIndexed { index, tv ->
+                TVModel(tv.copy(id = index)).apply {
+                    setLike(SP.getLike(index))
+                    setGroupIndex(2)
+                    listIndex = index
+                }
             }
-            listModelNew.add(tvModel)
-            val existingGroup = groupModel.tvGroupValue.find { model -> model.getName() == group }
-            if (existingGroup != null) {
-                existingGroup.addTVModel(tvModel)
-            } else {
-                val newGroup = TVListModel(group, groupModel.tvGroupValue.size)
-                newGroup.addTVModel(tvModel)
-                groupModel.addTVListModel(newGroup)
+
+            // 合并所有 TVModel
+            val modelMap = mutableMapOf<String, TVModel>()
+            (iptvModels + webviewModels).forEach { tvModel ->
+                val key = (tvModel.tv.group + tvModel.tv.name).ifEmpty { tvModel.tv.title }
+                if (modelMap.containsKey(key)) {
+                    modelMap[key]?.tv?.uris = (modelMap[key]?.tv?.uris.orEmpty() + tvModel.tv.uris).distinct()
+                } else {
+                    modelMap[key] = tvModel
+                }
             }
-            id++
-        }
+            val listModelNew = modelMap.values.sortedBy { it.listIndex }.toMutableList()
 
-        listModel = listModelNew
-        groupModel.tvGroupValue[1].setTVListModel(listModel)
-
-        if (currentTvTitle != null) {
-            val matchingTvModel = listModelNew.firstOrNull { it.tv.title == currentTvTitle }
-            if (matchingTvModel != null) {
-                groupModel.setCurrent(matchingTvModel)
-                Log.d(TAG, "str2Channels: Restored groupModel.current to: ${matchingTvModel.tv.title}")
-            } else {
-                Log.w(TAG, "str2Channels: No matching TVModel found for title: $currentTvTitle")
+            val groupMap = mutableMapOf<String, MutableList<TVModel>>()
+            listModelNew.forEach { tvModel ->
+                val group = tvModel.tv.group.ifEmpty { context.getString(R.string.unknown) }
+                groupMap.computeIfAbsent(group) { mutableListOf() }.add(tvModel)
             }
-        }
 
-        try {
-            val encodedString = SourceEncoder.encodeJsonSource(string)
-            if (string != cacheChannels && encodedString != cacheChannels) {
-                // Remove initPosition
+            groupMap.forEach { (group, tvModels) ->
+                val existingGroup = groupModel.tvGroupValue.find { it.getName() == group }
+                if (existingGroup != null) {
+                    existingGroup.setTVListModel(tvModels)
+                } else {
+                    val newGroup = TVListModel(group, groupModel.tvGroupValue.size)
+                    newGroup.setTVListModel(tvModels)
+                    groupModel.addTVListModel(newGroup)
+                }
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "加密字符串失敗: ${e.message}")
-        }
 
-        groupModel.setChange()
-        viewModelScope.launch(Dispatchers.IO) { preloadLogo() }
-        Log.d(TAG, "str2Channels: Updated listModel size=${listModel.size}")
+            listModel = listModelNew
+            groupModel.tvGroupValue[1].setTVListModel(listModelNew)
 
-        // 新增：确保 groupModel.current 非空，恢复旧代码的隐式播放
-        if (groupModel.getCurrent() == null && listModel.isNotEmpty()) {
-            groupModel.setCurrent(listModel[0])
-            Log.d(TAG, "str2Channels: Set default groupModel.current to: ${listModel[0].tv.title}")
+            // 仅当当前无有效 groupModel.current 或非稳定源时，恢复或设置默认
+            val currentStableSource = SP.getStableSources().firstOrNull { it.id == groupModel.getCurrent()?.tv?.id }
+            if (currentTvTitle != null) {
+                val matchingTvModel = listModelNew.firstOrNull { it.tv.title == currentTvTitle }
+                if (matchingTvModel != null) {
+                    groupModel.setCurrent(matchingTvModel)
+                    Log.d(TAG, "str2Channels: Restored groupModel.current to: ${matchingTvModel.tv.title}")
+                }
+            } else if (groupModel.getCurrent() == null || currentStableSource == null) {
+                // 仅当无稳定源时设置默认频道
+                if (listModelNew.isNotEmpty()) {
+                    groupModel.setCurrent(listModelNew[0])
+                    Log.d(TAG, "str2Channels: Set default groupModel.current to: ${listModelNew[0].tv.title}")
+                }
+            }
+
+            try {
+                val encodedString = SourceEncoder.encodeJsonSource(string)
+                if (string != cacheChannels && encodedString != cacheChannels) {
+                    // Remove initPosition
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "加密字符串失敗: ${e.message}")
+            }
+
+            viewModelScope.launch(Dispatchers.IO) { preloadLogo() }
+            Log.d(TAG, "str2Channels: Updated listModel size=${listModel.size}")
+            R.string.live_source_parsed.showToast()
+            groupModel.setChange()
         }
 
         return true
@@ -1051,11 +1063,100 @@ class MainViewModel : ViewModel() {
         Log.d(TAG, "clearCacheChannels: Cache cleared")
     }
 
+    fun loadActiveSource() {
+        val prefs = context.getSharedPreferences("SourceCache", Context.MODE_PRIVATE)
+        val filename = prefs.getString("active_source", null) ?: return
+        val cacheKey = "cache_$filename"
+        val cacheTimeKey = "cache_time_$filename"
+        val cachedContent = prefs.getString(cacheKey, null)
+        val cacheTime = prefs.getLong(cacheTimeKey, 0L)
+        val cacheFile = File(context.filesDir, "cache_$filename")
+        val url = prefs.getString("url_$filename", "") ?: ""
+        val cacheDuration = 24 * 60 * 60 * 1000L
+
+        if (filename == "default_channels.txt" || filename == "webchannelsiniptv.txt") {
+            val resourceId = if (filename == "default_channels.txt") R.raw.channels else R.raw.webchannelsiniptv
+            Log.d(TAG, "loadActiveSource: Loading $filename from R.raw")
+            viewModelScope.launch(Dispatchers.IO) {
+                val str = try {
+                    context.resources.openRawResource(resourceId).bufferedReader().use { it.readText() }
+                } catch (e: Exception) {
+                    Log.e(TAG, "loadActiveSource: Failed to read R.raw.$filename: ${e.message}")
+                    prefs.edit().remove("active_source").apply()
+                    return@launch
+                }
+                withContext(Dispatchers.Main) {
+                    tryStr2Channels(str, null, "", filename)
+                    _channelsOk.value = true
+                }
+                return@launch
+            }
+            return
+        }
+
+        if (cachedContent != null && cacheFile.exists() && System.currentTimeMillis() - cacheTime < cacheDuration) {
+            Log.d(TAG, "loadActiveSource: Loading active source $filename")
+            viewModelScope.launch(Dispatchers.IO) {
+                with(prefs.edit()) {
+                    putLong(cacheTimeKey, System.currentTimeMillis())
+                    apply()
+                }
+            }
+            viewModelScope.launch(Dispatchers.IO) { // 合并到 IO 线程
+                val isHex = cachedContent.trim().matches(Regex("^[0-9a-fA-F]+$"))
+                val contentToParse = if (isHex) {
+                    SourceDecoder.decodeHexSource(cachedContent) ?: cachedContent // 已由内部 IO 线程处理
+                } else {
+                    cachedContent
+                }
+                withContext(Dispatchers.Main) {
+                    tryStr2Channels(contentToParse, cacheFile, "", filename)
+                    _channelsOk.value = true
+                }
+            }
+        }
+    }
+
+    fun deleteCacheByTestCode(userId: String) {
+        val testCodes = UserInfoManager.getTestCodes()
+        val sourceName = testCodes[userId] ?: return
+        val filename = "${sourceName}.txt"
+        val prefs = context.getSharedPreferences("SourceCache", Context.MODE_PRIVATE)
+        val cacheFile = File(appDirectory, "cache_$filename")
+
+        viewModelScope.launch(Dispatchers.IO) {
+            if (cacheFile.exists()) {
+                cacheFile.delete()
+                Log.d(TAG, "Deleted cache file: cache_$filename for test code: $userId")
+            }
+            with(prefs.edit()) {
+                remove("cache_$filename")
+                remove("cache_time_$filename")
+                remove("url_$filename")
+                if (prefs.getString("active_source", null) == filename) {
+                    remove("active_source")
+                    Log.d(TAG, "Cleared active_source as it matched expired test code's filename: $filename")
+                    // 切换到默认源
+                    withContext(Dispatchers.Main) {
+                        reset(context)
+                    }
+                }
+                apply()
+            }
+            Log.d(TAG, "Cleared cache entries for test code: $userId, filename: $filename")
+            // 通知 UI 更新
+            withContext(Dispatchers.Main) {
+                context.getString(R.string.test_code_expired, userId).showToast()
+                _channelsOk.value = true
+            }
+        }
+    }
+
     companion object {
         private const val TAG = "MainViewModel"
         const val CACHE_FILE_NAME = "codechannels.txt"
-        const val CACHE_CODE_FILE = "cacheCode.txt"
         const val CACHE_EPG = "epg.xml"
         val DEFAULT_CHANNELS_FILE = R.raw.channels
+        val DEFAULT_WEBCHANNELS_FILE = R.raw.webchannelsiniptv
     }
 }

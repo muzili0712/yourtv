@@ -56,17 +56,13 @@ object Utils {
         get() = _isp
 
     fun getDateFormat(format: String): String {
-        return SimpleDateFormat(
-            format,
-            Locale.CHINA
-        ).format(Date(System.currentTimeMillis() - between))
+        return SimpleDateFormat(format, Locale.getDefault())
+            .format(Date(System.currentTimeMillis() - between))
     }
 
     fun getDateFormat(format: String, seconds: Int): String {
-        return SimpleDateFormat(
-            format,
-            Locale.CHINA
-        ).format(Date(seconds * 1000L))
+        return SimpleDateFormat(format, Locale.getDefault())
+            .format(Date(seconds * 1000L))
     }
 
     fun getDateTimestamp(): Long {

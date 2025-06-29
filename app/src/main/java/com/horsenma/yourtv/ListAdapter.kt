@@ -215,9 +215,6 @@ class TVListAdapter(
     fun toPosition(position: Int) {
         focusRunnable?.let { recyclerView.removeCallbacks(it) }
         focusRunnable = Runnable {
-            // 清除焦点并临时禁用 RecyclerView 焦点
-            recyclerView.clearFocus()
-            recyclerView.isFocusable = false
             (recyclerView.layoutManager as? LinearLayoutManager)?.scrollToPosition(position)
             val viewHolder = recyclerView.findViewHolderForAdapterPosition(position)
             if (viewHolder != null) {
@@ -232,9 +229,10 @@ class TVListAdapter(
                     }
                 }
                 Log.d(TAG, "ListAdapter: Focused on position $position")
+            } else {
+                Log.w(TAG, "ListAdapter: ViewHolder not found for position $position, retrying")
+                recyclerView.postDelayed({ toPosition(position) }, 50)
             }
-            // 恢复 RecyclerView 焦点
-            recyclerView.isFocusable = true
         }
         recyclerView.post(focusRunnable!!)
     }

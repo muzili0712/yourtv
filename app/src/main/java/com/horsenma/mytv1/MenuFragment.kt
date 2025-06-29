@@ -172,7 +172,7 @@ class MenuFragment : Fragment(), GroupAdapter.ItemListener, ListAdapter.ItemList
             KeyEvent.KEYCODE_DPAD_RIGHT -> {
                 if (binding.group.findFocus() != null) { // 焦点在 group 或其子项
                     if (listAdapter.itemCount == 0) {
-                        Toast.makeText(context, "暂无频道", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, getString(R.string.no_channels), Toast.LENGTH_LONG).show()
                         return true
                     }
                     groupAdapter.focusable(false)

@@ -84,7 +84,7 @@ class GroupAdapter(
                 if (p != tvGroupModel.positionValue) {
                     tvGroupModel.setPosition(p)
                 }
-                
+
             } else {
                 viewHolder.focus(false)
             }
@@ -121,11 +121,12 @@ class GroupAdapter(
     class ViewHolder(private val context: Context, private val binding: GroupItemBinding) :
         RecyclerView.ViewHolder(binding.root) {
         fun bindTitle(text: String) {
-            binding.title.text = when (text) {
-                "我的收藏" -> context.getString(R.string.my_favorites)
-                "全部頻道" -> context.getString(R.string.all_channels)
+            val localizedText = when (text) {
+                context.getString(R.string.my_favorites) -> context.getString(R.string.my_favorites)
+                context.getString(R.string.all_channels) -> context.getString(R.string.all_channels)
                 else -> text
             }
+            binding.title.text = localizedText
         }
 
         fun focus(hasFocus: Boolean) {

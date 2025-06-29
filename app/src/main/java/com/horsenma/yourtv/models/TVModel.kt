@@ -22,6 +22,7 @@ import com.horsenma.yourtv.data.TV
 import com.horsenma.yourtv.requests.HttpClient
 import kotlin.math.max
 import kotlin.math.min
+import android.util.Log
 
 class TVModel(var tv: TV) : ViewModel() {
     var retryTimes = 0
@@ -47,6 +48,14 @@ class TVModel(var tv: TV) : ViewModel() {
 
     fun getGroupIndexInAll(): Int {
         return _groupIndex
+    }
+
+    fun sourceUp() {
+        val validUris = tv.uris.filter { it.isNotBlank() }
+        if (validUris.isEmpty()) return
+        val newIndex = (videoIndexValue + 1) % validUris.size
+        setVideoIndex(newIndex)
+        confirmVideoIndex()
     }
 
     var listIndex = 0
@@ -234,7 +243,7 @@ class TVModel(var tv: TV) : ViewModel() {
         sourceTypeList = listOf(
             SourceType.UNKNOWN,
         )
-
+        Log.d(TAG, "nextVideo: title=${tv.title}, new videoIndex=$videoIndexValue, url=${tv.uris.getOrNull(videoIndexValue)}")
         return isLastVideo()
     }
 

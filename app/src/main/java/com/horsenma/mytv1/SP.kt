@@ -7,6 +7,7 @@ import com.horsenma.yourtv.R
 
 
 object SP {
+    private const val PREF_NAME = "mytv1_prefs"
     // If Change channel with up and down in reversed order or not
     private const val KEY_CHANNEL_REVERSAL = "channel_reversal"
     // If use channel num to select channel or not
@@ -46,10 +47,7 @@ object SP {
      * The method must be invoked as early as possible(At least before using the keys)
      */
     fun init(context: Context) {
-        sp = context.getSharedPreferences(
-            context.resources.getString(R.string.app_name),
-            Context.MODE_PRIVATE
-        )
+        sp = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
     }
 
     fun setOnSharedPreferenceChangeListener(listener: OnSharedPreferenceChangeListener) {

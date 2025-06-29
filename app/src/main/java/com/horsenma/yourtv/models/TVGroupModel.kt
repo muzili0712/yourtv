@@ -4,7 +4,6 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.horsenma.yourtv.SP
-import android.util.Log
 
 class TVGroupModel : ViewModel() {
     var version = 0
@@ -22,7 +21,7 @@ class TVGroupModel : ViewModel() {
     val positionValue: Int
         get() = _position.value ?: 0
 
-    private val _current = MutableLiveData<TVModel?>() // 添加当前频道状态
+    private val _current = MutableLiveData<TVModel?>()
     val current: LiveData<TVModel?>
         get() = _current
 
@@ -215,20 +214,7 @@ class TVGroupModel : ViewModel() {
     }
 
     fun defaultPosition(): Int {
-        // 1 全部
-        // 2 第一組
         return if (tvGroupValue.size > 2) 2 else 1
-    }
-
-    fun initTVGroup() {
-        // 确保初始分组存在
-        val currentGroups = _tvGroup.value ?: listOf(
-            TVListModel("我的收藏", 0),
-            TVListModel("全部頻道", 1)
-        )
-        _tvGroup.postValue(currentGroups.toMutableList())
-        currentGroups[1].initTVList()
-        Log.d(TAG, "TVGroup initialized with ${currentGroups.size} groups")
     }
 
     fun initPosition() {

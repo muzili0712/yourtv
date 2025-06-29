@@ -54,7 +54,7 @@ android {
             excludes += listOf(
                 "META-INF/INDEX.LIST",
                 "META-INF/DEPENDENCIES",
-                "META-INF/io.netty.versions.properties" // 新增排除
+                "META-INF/io.netty.versions.properties"
             )
         }
     }
@@ -63,7 +63,7 @@ android {
         outputs.all {
             if (this is com.android.build.gradle.internal.api.BaseVariantOutputImpl) {
                 val appName = "yourtv"
-                val newName = "${appName}_v1.7.5.apk"
+                val newName = "${appName}_v1.8.5.apk"
                 outputFileName = newName
             }
         }
@@ -71,21 +71,22 @@ android {
 }
 
 fun getVersionName(): String {
-    return "1.7.5"
+    return "1.8.5"
 }
 
 fun getVersionCode(): Int {
     val parts = getVersionName().split(".")
     val major = parts.getOrNull(0)?.toIntOrNull() ?: 0
     val minor = parts.getOrNull(1)?.toIntOrNull() ?: 0
-    return major * 100 + minor
+    val patch = parts.getOrNull(2)?.toIntOrNull() ?: 0
+    return major * 100 + minor * 10 + patch
 }
 
 dependencies {
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 
     implementation(libs.activity.ktx)
-    implementation(libs.appcompat.v161)
+    implementation(libs.appcompat)
     implementation(libs.constraintlayout)
     implementation(libs.core.ktx.v1160)
     implementation(libs.coroutines)
@@ -114,5 +115,7 @@ dependencies {
     implementation(libs.viewbinding)
     implementation(libs.webkit)
     implementation(libs.zxing)
+    implementation("org.bouncycastle:bcprov-jdk15on:1.70")
     implementation("com.tencent.tbs:tbssdk:44286")
+    implementation(files("libs/lib-decoder-ffmpeg-release.aar"))
 }

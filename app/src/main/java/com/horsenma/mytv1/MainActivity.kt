@@ -16,6 +16,7 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
 import android.content.Intent
+import androidx.annotation.RequiresApi
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -59,6 +60,19 @@ class MainActivity : FragmentActivity() {
     private var lastBackPressTime = 0L
     private val BACK_PRESS_INTERVAL = 2000L
 
+    private val handleEnterRunnable = Runnable {
+        if (menuPressCount == 1) { // 单次按键触发 menuFragment
+            showFragment(menuFragment)
+            menuActive()
+        }
+        menuPressCount = 0 // 重置计数
+    }
+
+    private val handleRightRunnable = Runnable {
+        // RIGHT 键单次无操作，保持原有逻辑（不触发 sourceUp）
+        menuPressCount = 0 // 重置计数
+    }
+
     // 添加 handleTapRunnable
     private val handleTapRunnable = Runnable {
         if (menuPressCount >= REQUIRED_MENU_PRESSES) {
@@ -72,6 +86,7 @@ class MainActivity : FragmentActivity() {
     }
 
     // 文件: com.horsenma.mytv1.MainActivity
+    @RequiresApi(Build.VERSION_CODES.P)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         SP.init(this)
@@ -81,34 +96,62 @@ class MainActivity : FragmentActivity() {
         TVList.reloadData(this)
         Log.d(TAG, "TVList initialized in onCreate")
 
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
-        windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
-        windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        window.statusBarColor = Color.TRANSPARENT
-        window.navigationBarColor = Color.TRANSPARENT
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        updateFullScreenMode(com.horsenma.yourtv.SP.fullScreenMode) // 初始化全屏模式
+        Log.d(TAG, "com.horsenma.yourtv.SP.fullScreenMode = ${com.horsenma.yourtv.SP.fullScreenMode}")
 
         setContentView(R.layout.activity_main)
 
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction()
-                .add(R.id.main_browse_fragment, webFragment)
-                .add(R.id.main_browse_fragment, errorFragment)
-                .add(R.id.main_browse_fragment, loadingFragment)
-                .add(R.id.main_browse_fragment, infoFragment)
-                .add(R.id.main_browse_fragment, channelFragment)
-                .add(R.id.main_browse_fragment, menuFragment)
-                .add(R.id.main_browse_fragment, settingFragment)
+                .add(R.id.main_browse_fragment, webFragment, "WebFragment")
+                .add(R.id.main_browse_fragment, errorFragment, "ErrorFragment")
+                .add(R.id.main_browse_fragment, loadingFragment, "LoadingFragment")
+                .add(R.id.main_browse_fragment, infoFragment, "InfoFragment")
+                .add(R.id.main_browse_fragment, channelFragment, "ChannelFragment")
+                .add(R.id.main_browse_fragment, menuFragment, "MenuFragment")
+                .add(R.id.main_browse_fragment, settingFragment, "SettingFragment")
                 .hide(menuFragment)
                 .hide(settingFragment)
                 .hide(errorFragment)
                 .hide(loadingFragment)
                 .show(webFragment)
                 .commitNow()
+            isSafeToPerformFragmentTransactions = true
         }
 
         gestureDetector = GestureDetector(this, GestureListener(this))
+    }
+
+    @RequiresApi(Build.VERSION_CODES.P)
+    fun updateFullScreenMode(isFullScreen: Boolean) {
+        window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+        val params = window.attributes
+        if (isFullScreen) {
+            windowInsetsController.hide(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
+            params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+        } else {
+            windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
+            params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT
+        }
+        window.attributes = params // 强制应用窗口属性
+        windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        window.statusBarColor = Color.TRANSPARENT
+        window.navigationBarColor = Color.TRANSPARENT
+        // 强制刷新窗口
+        window.decorView.requestLayout()
+        window.decorView.invalidate()
+        Log.d(TAG, "updateFullScreenMode: isFullScreen=$isFullScreen, layoutInDisplayCutoutMode=${window.attributes.layoutInDisplayCutoutMode}")
+        if (isSafeToPerformFragmentTransactions && webFragment.isAdded) {
+            handler.removeCallbacksAndMessages(null)
+            handler.postDelayed({
+                webFragment.updateWebViewLayout()
+                val displayMetrics = resources.displayMetrics
+                Log.d(TAG, "Window size: width=${displayMetrics.widthPixels}, height=${displayMetrics.heightPixels}")
+            }, 100)
+        }
     }
 
     override fun onResumeFragments() {
@@ -126,13 +169,13 @@ class MainActivity : FragmentActivity() {
         if (TVList.size() > 0) {
             if (!TVList.setPosition(0)) {
                 Log.w(TAG, "Failed to set position 0, list may be empty")
-                "频道列表为空".showToast(Toast.LENGTH_LONG)
+                getString(R.string.channel_list_empty).showToast(Toast.LENGTH_LONG)
             } else {
-                "播放默认频道".showToast(Toast.LENGTH_LONG)
+                getString(R.string.play_default_channel).showToast(Toast.LENGTH_LONG)
             }
         } else {
             Log.w(TAG, "No channels available")
-            "无可用频道".showToast(Toast.LENGTH_LONG)
+            getString(R.string.no_available_channel).showToast(Toast.LENGTH_LONG)
         }
         server = SimpleServer(this)
     }
@@ -203,6 +246,7 @@ class MainActivity : FragmentActivity() {
     override fun onTouchEvent(event: MotionEvent?): Boolean {
         if (event != null) {
             gestureDetector.onTouchEvent(event)
+            return true
         }
         return super.onTouchEvent(event)
     }
@@ -457,10 +501,21 @@ class MainActivity : FragmentActivity() {
     }
 
     private val hideSetting = Runnable {
-        if (!settingFragment.isHidden) {
-            supportFragmentManager.beginTransaction().hide(settingFragment).commitNow()
+        if (!isFinishing && !isDestroyed && !supportFragmentManager.isStateSaved) {
+            try {
+                if (!settingFragment.isHidden) {
+                    supportFragmentManager.beginTransaction()
+                        .hide(settingFragment)
+                        .commit() // 替换为异步 commit
+                    Log.d(TAG, "SettingFragment hidden")
+                }
+                addTimeFragment()
+            } catch (e: IllegalStateException) {
+                Log.e(TAG, "Failed to hide SettingFragment: ${e.message}", e)
+            }
+        } else {
+            Log.w(TAG, "Skipped hideSetting: isFinishing=$isFinishing, isDestroyed=$isDestroyed, isStateSaved=${supportFragmentManager.isStateSaved}")
         }
-        addTimeFragment()
     }
 
     fun addTimeFragment() {
@@ -636,8 +691,25 @@ class MainActivity : FragmentActivity() {
                 return true
             }
             KEYCODE_ENTER, KEYCODE_DPAD_CENTER -> {
-                showFragment(menuFragment)
-                menuActive()
+                val currentTime = System.currentTimeMillis()
+                val timeSinceLastPress = currentTime - lastMenuPressTime
+
+                if (timeSinceLastPress <= 400) { // 300ms 内连续按
+                    menuPressCount++
+                    if (menuPressCount >= 4) { // 4 次触发 settingFragment
+                        showSetting()
+                        menuPressCount = 0
+                        handler.removeCallbacks(handleEnterRunnable) // 取消 menuFragment 显示
+                        return true
+                    }
+                } else {
+                    menuPressCount = 1 // 重置计数
+                }
+                lastMenuPressTime = currentTime
+
+                // 延迟 600ms 检查是否显示 menuFragment
+                handler.removeCallbacks(handleEnterRunnable)
+                handler.postDelayed(handleEnterRunnable, 600)
                 return true
             }
             KEYCODE_DPAD_LEFT -> {
@@ -656,7 +728,26 @@ class MainActivity : FragmentActivity() {
                     menuActive()
                     return false
                 }
-                return true // 无 sourceUp，拦截但不处理
+                val currentTime = System.currentTimeMillis()
+                val timeSinceLastPress = currentTime - lastMenuPressTime
+
+                if (timeSinceLastPress <= 400) { // 400ms 内连续按
+                    menuPressCount++
+                    if (menuPressCount >= 4) { // 4 次触发 settingFragment
+                        showSetting()
+                        menuPressCount = 0
+                        handler.removeCallbacks(handleRightRunnable) // 取消其他操作
+                        return true
+                    }
+                } else {
+                    menuPressCount = 1 // 重置计数
+                }
+                lastMenuPressTime = currentTime
+
+                // 延迟 600ms 检查是否触发其他操作（当前无 sourceUp）
+                handler.removeCallbacks(handleRightRunnable)
+                handler.postDelayed(handleRightRunnable, 600)
+                return true
             }
         }
         return false
@@ -677,7 +768,7 @@ class MainActivity : FragmentActivity() {
     }
 
     fun handleWebviewTypeSwitch(enable: Boolean) {
-        if (!enable) return
+        if (enable) return // 仅处理切换到 IPTV 模式
         val currentTime = System.currentTimeMillis()
         if (currentTime - lastSwitchTime < DEBOUNCE_INTERVAL) {
             Log.d(TAG, "Switch ignored due to debounce")
@@ -687,9 +778,14 @@ class MainActivity : FragmentActivity() {
 
         lifecycleScope.launch(Dispatchers.Main) {
             try {
-                supportFragmentManager.beginTransaction()
-                    .hide(webFragment)
-                    .commitNowAllowingStateLoss()
+                // 释放 WebFragment 资源
+                if (webFragment.isAdded) {
+                    supportFragmentManager.beginTransaction()
+                        .remove(webFragment)
+                        .commitNowAllowingStateLoss()
+                    webFragment = WebFragment() // 创建新实例
+                }
+                // 隐藏其他 Fragment
                 supportFragmentManager.fragments.forEach { fragment ->
                     if (fragment.isAdded && !fragment.isHidden) {
                         supportFragmentManager.beginTransaction()
@@ -702,7 +798,7 @@ class MainActivity : FragmentActivity() {
                 Log.d(TAG, "SP.enableWebviewType set to false")
                 delay(500)
                 val intent = Intent(this@MainActivity, com.horsenma.yourtv.MainActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 }
                 startActivity(intent)
                 finish()
@@ -722,7 +818,9 @@ class MainActivity : FragmentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        handler.removeCallbacksAndMessages(null) // 清理所有 Handler 任务
         server?.stop()
+        Log.d(TAG, "MainActivity destroyed, Handler callbacks cleared")
     }
 
     companion object {

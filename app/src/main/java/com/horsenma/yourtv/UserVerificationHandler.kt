@@ -32,10 +32,9 @@ class UserVerificationHandler(
 ) {
     private val TAG = "UserVerificationHandler"
     private var lastClickTime = 0L
-    private val DEBOUNCE_INTERVAL = 5000L // 5秒防抖间隔
+    private val DEBOUNCE_INTERVAL = 10000L // 5秒防抖间隔
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
     private lateinit var binding: UserconfirmBinding
-    private lateinit var warningMessages: List<String>
     private lateinit var remoteUsers: List<RemoteUserInfo>
 
     @SuppressLint("SetTextI18n")
@@ -50,25 +49,15 @@ class UserVerificationHandler(
             try {
                 Log.d(TAG, "handleUserVerification: Started")
 
-                // Download user_info.txt with error handling
-                warningMessages = emptyList()
+                // 初始化 remoteUsers
                 remoteUsers = emptyList()
-                try {
-                    val (warnings, users) = userInfoManager.downloadRemoteUserInfo()
-                    warningMessages = warnings
-                    remoteUsers = users
-                    activity.usersInfo = users.map { it.userId }
-                    Log.d(TAG, "Downloaded users_infon.txt, warnings=$warningMessages, users=$users")
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to download users_infon.txt: ${e.message}", e)
-                }
 
-                // Check for external warning messages
-                val externalWarnings = activity.intent?.extras?.getStringArrayList("warning_messages")?.toList() ?: emptyList()
-                warningMessages = if (externalWarnings.isNotEmpty()) externalWarnings else warningMessages
-                Log.d(TAG, "Using warningMessages: $warningMessages")
+                // 配置对话框 UI
+                binding = UserconfirmBinding.inflate(dialog.context.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater)
+                dialog.setContentView(binding.root)
+                Log.d(TAG, "instructionText=${binding.loadingText1 != null}, confirmButton=${binding.confirmButton != null}, keyInput=${binding.keyInput != null}, errorText=${binding.errorText != null}")
 
-                // Load local user_info.txt
+                // 加载本地 user_info.txt
                 val userInfo = try {
                     withContext(Dispatchers.IO) { userInfoManager.loadUserInfo() }
                 } catch (e: Exception) {
@@ -77,24 +66,37 @@ class UserVerificationHandler(
                 }
                 Log.d(TAG, "Loaded userInfo=$userInfo")
 
-                // Verify dialog state
+                // 立即显示输入 UI
+                setupInputUI(userInfo, callback, dialog.context, dialog)
+
+                // 后台下载 remote users info
+                launch(Dispatchers.IO) {
+                    try {
+                        val (warnings, users) = userInfoManager.downloadRemoteUserInfo(forceRefresh = true)
+                        withContext(Dispatchers.Main) {
+                            remoteUsers = users
+                            activity.usersInfo = users.map { it.userId }
+                            Log.d(TAG, "Downloaded users_infon.txt, users=$users")
+                            // 更新 UI
+                            updateUIAfterDownload(userInfo)
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to download users_infon.txt: ${e.message}", e)
+                        withContext(Dispatchers.Main) {
+                            binding.errorText.text = activity.getString(R.string.network_poor_retry_skip)
+                            binding.errorText.visibility = View.VISIBLE
+                        }
+                    }
+                }
+
+                // 验证对话框状态
                 if (!dialog.isShowing || dialog.window == null) {
                     Log.e(TAG, "Dialog not showing or window is null, isShowing=${dialog.isShowing}")
                     callback.onCompleted()
                     return@launch
                 }
 
-                // Configure dialog UI
-                binding = UserconfirmBinding.inflate(dialog.context.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater)
-                dialog.setContentView(binding.root)
-
-                // Log UI binding
-                Log.d(TAG, "instructionText=${binding.loadingText1 != null}, confirmButton=${binding.confirmButton != null}, keyInput=${binding.keyInput != null}, errorText=${binding.errorText != null}")
-
-                // Setup input UI
-                setupInputUI(warningMessages, userInfo, callback, dialog.context, dialog)
-
-                // Handle verification logic
+                // 处理验证逻辑
                 val verificationJob = activity.lifecycleScope.launch(Dispatchers.Main) {
                     val verificationCallback = object : MainActivity.VerificationCallback {
                         override fun onKeyConfirmed(key: String) {
@@ -125,23 +127,45 @@ class UserVerificationHandler(
         }
     }
 
-    internal suspend fun handleKeyConfirmation(key: String, dialog: Dialog, callback: VerificationCallback ) {
-        Log.d(TAG, "handleKeyConfirmation: Started for key=$key")
-        var mutableWarningMessages = warningMessages.toMutableList()
-        var mutableRemoteUsers = remoteUsers.toMutableList()
-        var downloadFailed = remoteUsers.isEmpty()
-        if (downloadFailed) {
-            Log.d(TAG, "Retrying download due to downloadFailed")
-            try {
-                val (newWarnings, newUsers) = userInfoManager.downloadRemoteUserInfo()
-                mutableWarningMessages = newWarnings.toMutableList()
-                mutableRemoteUsers = newUsers.toMutableList()
-                activity.usersInfo = mutableRemoteUsers.map { it.userId }
-                downloadFailed = mutableRemoteUsers.isEmpty()
-            } catch (e: Exception) {
-                Log.e(TAG, "Retry download failed: ${e.message}", e)
+    // 新增方法：下载完成后更新 UI
+    private fun updateUIAfterDownload(userInfo: UserInfo?) {
+        val hasValidKey = try {
+            userInfo != null && userInfoManager.validateKey(userInfo.userId, remoteUsers) != null
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to validate key: ${e.message}", e)
+            false
+        }
+
+        binding.loadingText1.text = if (hasValidKey) {
+            activity.getString(R.string.channel_menu_switch_source)
+        } else {
+            activity.getString(R.string.enter_test_code)
+        }
+        binding.validKeyText.let {
+            if (hasValidKey && userInfo != null) {
+                val maskedKey = "*".repeat(15) + userInfo.userId.takeLast(5)
+                it.text = activity.getString(R.string.existing_test_code, maskedKey)
+                it.visibility = View.VISIBLE
+                Log.d(TAG, "Showing valid key=$maskedKey")
+            } else {
+                it.visibility = View.GONE
             }
         }
+        Log.d(TAG, "UI updated after download: instructionText=${binding.loadingText1.text}")
+    }
+
+    internal suspend fun handleKeyConfirmation(key: String, dialog: Dialog, callback: VerificationCallback ) {
+        Log.d(TAG, "handleKeyConfirmation: Started for key=$key")
+        var mutableRemoteUsers = remoteUsers.toMutableList()
+        // Force re-download user info
+        try {
+            val (newWarnings, newUsers) = userInfoManager.downloadRemoteUserInfo(forceRefresh = true)
+            mutableRemoteUsers = newUsers.toMutableList()
+            activity.usersInfo = mutableRemoteUsers.map { it.userId }
+        } catch (e: Exception) {
+            Log.e(TAG, "Force re-download failed: ${e.message}", e)
+        }
+        val downloadFailed = mutableRemoteUsers.isEmpty()
 
         val validatedUser = try {
             withContext(Dispatchers.IO) { userInfoManager.validateKey(key, mutableRemoteUsers) }
@@ -162,7 +186,7 @@ class UserVerificationHandler(
                     }
                 }
                 hideInputUI()
-                binding.loadingText1.text = "正在更新直播源，請等待"
+                binding.loadingText1.text = activity.getString(R.string.code_valid_updating)
                 Log.d(TAG, "Showing download UI")
             }
 
@@ -171,11 +195,11 @@ class UserVerificationHandler(
                 withContext(Dispatchers.IO) { userInfoManager.checkBinding(key, deviceId) }
             } catch (e: Exception) {
                 Log.e(TAG, "Check binding failed: ${e.message}", e)
-                false to "測試碼綁定失敗"
+                false to activity.getString(R.string.test_code_bind_failed)
             }
             if (!isValid) {
                 withContext(Dispatchers.Main) {
-                    binding.errorText.text = errorMsg ?: "測試碼綁定失敗"
+                    binding.errorText.text = errorMsg ?: activity.getString(R.string.test_code_bind_failed)
                     binding.errorText.visibility = View.VISIBLE
                 }
                 return
@@ -184,24 +208,18 @@ class UserVerificationHandler(
                 withContext(Dispatchers.IO) { userInfoManager.updateBinding(key, deviceId) }
             } catch (e: Exception) {
                 Log.e(TAG, "Update binding failed: ${e.message}", e)
-                false to "測試碼綁定失敗"
+                false to activity.getString(R.string.test_code_bind_failed)
             }
             if (!bindingSuccess) {
                 withContext(Dispatchers.Main) {
-                    binding.errorText.text = bindingMsg ?: "測試碼綁定失敗"
+                    binding.errorText.text = bindingMsg ?: activity.getString(R.string.test_code_bind_failed)
                     binding.errorText.visibility = View.VISIBLE
                 }
                 return
             }
 
             val today = SimpleDateFormat("yyyyMMdd", Locale.US).format(Date())
-            val cacheCodeFile = File(activity.filesDir, MainViewModel.CACHE_CODE_FILE)
 
-            // 清空缓存，确保下载新直播源
-            if (cacheCodeFile.exists()) {
-                Log.d(TAG, "Clearing cacheCode.txt for key=$key")
-                cacheCodeFile.delete()
-            }
             viewModel.clearCacheChannels() // 清空 MainViewModel 的 cacheChannels
 
             // 更新 UserInfo
@@ -248,13 +266,13 @@ class UserVerificationHandler(
                             Log.e(TAG, "Failed to show dialog for error: ${e.message}", e)
                         }
                     }
-                    showInputUI("直播源下載失敗，請重試。")
+                    showInputUI(activity.getString(R.string.live_source_download_failed))
                     Log.d(TAG, "Showing error UI")
                 }
             }
         } else {
             withContext(Dispatchers.Main) {
-                binding.errorText.text = if (downloadFailed) "網絡不佳，請重試或跳過。" else "測試碼無效，請重新輸入。"
+                binding.errorText.text = if (downloadFailed) activity.getString(R.string.network_poor_retry_skip) else activity.getString(R.string.test_code_invalid)
                 binding.errorText.visibility = View.VISIBLE
             }
         }
@@ -284,7 +302,7 @@ class UserVerificationHandler(
             }
         }
         withContext(Dispatchers.Main) {
-            binding.loadingText1.text = warningMessages.getOrNull(0) ?: "歡迎使用 您的電視！"
+            binding.loadingText1.text = activity.getString(R.string.test_code_invalid)
             binding.errorText.visibility = View.GONE
             dialog.dismiss()
             Log.d(TAG, "Dialog dismissed")
@@ -292,14 +310,13 @@ class UserVerificationHandler(
         callback.onCompleted()
     }
 
+    @SuppressLint("SetTextI18n")
     private fun setupInputUI(
-        warningMessages: List<String>,
         userInfo: UserInfo?,
         callback: MainActivity.VerificationCallback,
         context: Context,
         dialog: Dialog // 新增 dialog 参数
     ) {
-        val downloadFailed = warningMessages.isEmpty()
         val hasValidKey = try {
             userInfo != null && userInfoManager.validateKey(userInfo.userId, remoteUsers) != null
         } catch (e: Exception) {
@@ -312,22 +329,22 @@ class UserVerificationHandler(
 
         // Update warning messages
         binding.loadingText1.text = if (hasValidKey) {
-            "新的輸入將替換現有測試碼。"
+            activity.getString(R.string.channel_menu_switch_source)
         } else {
-            if (downloadFailed) "網絡不佳，請輸入測試碼或跳過。" else "請輸入測試碼"
+            activity.getString(R.string.enter_test_code)
         }
         binding.loadingText1.visibility = View.VISIBLE
         Log.d(TAG, "instructionText set to: ${binding.loadingText1.text}")
-        binding.loadingText2.text = warningMessages.getOrNull(1) ?: context.getString(R.string.loading_message2)
-        binding.loadingText2.visibility = if (warningMessages.size > 1) View.VISIBLE else View.GONE
+        binding.loadingText2.text = context.getString(R.string.loading_message2)
+        binding.loadingText2.visibility = View.VISIBLE
         Log.d(TAG, "warningText set to: ${binding.loadingText2.text}")
-        binding.loadingText3.text = warningMessages.getOrNull(2) ?: context.getString(R.string.loading_message3)
-        binding.loadingText3.visibility = if (warningMessages.size > 2) View.VISIBLE else View.GONE
+        binding.loadingText3.text = context.getString(R.string.loading_message3)
+        binding.loadingText3.visibility = View.VISIBLE
         Log.d(TAG, "warningText2 set to: ${binding.loadingText3.text}")
         binding.validKeyText.let {
             if (hasValidKey && userInfo != null) {
                 val maskedKey = "*".repeat(15) + userInfo.userId.takeLast(5)
-                it.text = "現有測試碼：$maskedKey"
+                it.text = activity.getString(R.string.existing_test_code, maskedKey)
                 it.visibility = View.VISIBLE
                 Log.d(TAG, "Showing valid key=$maskedKey")
             } else {
@@ -435,6 +452,20 @@ class UserVerificationHandler(
             lastClickTime = currentTime
             Log.d(TAG, "Confirm button clicked")
             activity.settingActive()
+
+            // 检查测试码输入频率
+            val prefs = activity.getSharedPreferences("VerificationPrefs", Context.MODE_PRIVATE)
+            val lastInputTime = prefs.getLong("last_key_input_time", 0)
+            val restrictInterval = 10 * 60 * 1000 // 10 分钟（毫秒）
+            val timeSinceLastInput = currentTime - lastInputTime
+            if (lastInputTime > 0 && timeSinceLastInput < restrictInterval) {
+                val remainingMinutes = ((restrictInterval - timeSinceLastInput) / 60_000 + 1).toInt()
+                binding.errorText.text = activity.getString(R.string.please_wait_minutes, remainingMinutes)
+                binding.errorText.visibility = View.VISIBLE
+                Log.d(TAG, "Input restricted: wait $remainingMinutes minutes")
+                return@setOnClickListener
+            }
+
             try {
                 val inputKey = binding.keyInput.text.toString().trim()
                 // 使用输入的测试码，或 fallback 到 userInfo.userId
@@ -444,14 +475,18 @@ class UserVerificationHandler(
                     Log.d(TAG, "No input key, using existing userInfo.userId=${userInfo.userId}")
                     userInfo.userId
                 } else {
-                    binding.errorText.text = "請輸入測試碼或確保已有有效測試碼。"
+                    binding.errorText.text = activity.getString(R.string.enter_or_valid_code)
                     binding.errorText.visibility = View.VISIBLE
                     return@setOnClickListener
                 }
+                // 立即显示验证中提示并隐藏输入 UI
+                hideInputUI()
+                binding.loadingText1.text = activity.getString(R.string.code_verifying)
+                binding.loadingText1.visibility = View.VISIBLE
                 triggerConfirm(key, dialog, callback)
             } catch (e: Exception) {
                 Log.e(TAG, "Confirm button error: ${e.message}", e)
-                binding.errorText.text = "輸入錯誤，請重試。"
+                binding.errorText.text = activity.getString(R.string.input_process_error)
                 binding.errorText.visibility = View.VISIBLE
             }
         }
@@ -473,9 +508,9 @@ class UserVerificationHandler(
             binding.errorText.text = ""
             binding.errorText.visibility = View.GONE
         }
-        binding.loadingText1.text = "請輸入測試碼"
-        binding.loadingText2.text = "沒有測試碼，您無法測試所有功能。"
-        binding.loadingText3.text = "正在載入在線直播源，請等待（約10-20秒)。"
+        binding.loadingText1.text = activity.getString(R.string.enter_test_code)
+        binding.loadingText2.text = activity.getString(R.string.no_code_no_full_features)
+        binding.loadingText3.text = activity.getString(R.string.loading_live_source)
         ensureFocus()
         Log.d(TAG, "Input UI shown")
     }
@@ -506,7 +541,7 @@ class UserVerificationHandler(
         try {
             activity.lifecycleScope.launch { handleKeyConfirmation(key, dialog, callback) }
         } catch (e: Exception) {
-            binding.errorText.text = "輸入處理錯誤，請重試。"
+            binding.errorText.text = activity.getString(R.string.input_process_error)
             binding.errorText.visibility = View.VISIBLE
             Log.e(TAG, "Trigger confirm error: ${e.message}", e)
         }
@@ -516,7 +551,7 @@ class UserVerificationHandler(
         try {
             activity.lifecycleScope.launch { handleSkip(dialog, callback) }
         } catch (e: Exception) {
-            binding.errorText.text = "操作失敗，請重試。"
+            binding.errorText.text = activity.getString(R.string.operation_failed_retry)
             binding.errorText.visibility = View.VISIBLE
             Log.e(TAG, "Trigger skip error: ${e.message}", e)
         }
@@ -554,97 +589,6 @@ class UserVerificationHandler(
         binding.keyInput.isFocusable = true
         binding.keyInput.isFocusableInTouchMode = true
         binding.keyInput.requestFocus()
-    }
-
-    suspend fun handleKeyVerificationWithoutUI(key: String): Boolean {
-        Log.d(TAG, "handleKeyVerificationWithoutUI: Started for key=$key")
-        // 初始化 warningMessages 和 remoteUsers
-        if (!::warningMessages.isInitialized || !::remoteUsers.isInitialized) {
-            try {
-                withContext(Dispatchers.IO) {
-                    val (warnings, users) = userInfoManager.downloadRemoteUserInfo()
-                    warningMessages = warnings
-                    remoteUsers = users
-                    activity.usersInfo = users.map { it.userId }
-                    Log.d(TAG, "Initialized warningMessages=$warnings, remoteUsers=$users")
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to initialize data: ${e.message}", e)
-                return false
-            }
-        }
-        val mutableRemoteUsers = remoteUsers.toMutableList()
-        val validatedUser = try {
-            withContext(Dispatchers.IO) { userInfoManager.validateKey(key, mutableRemoteUsers) }
-        } catch (e: Exception) {
-            Log.e(TAG, "Validate key failed: ${e.message}", e)
-            return false
-        }
-        if (validatedUser == null) {
-            Log.w(TAG, "Invalid key: $key")
-            return false
-        }
-        val deviceId = userInfoManager.getDeviceId()
-        val (isValid, _) = try {
-            withContext(Dispatchers.IO) { userInfoManager.checkBinding(key, deviceId) }
-        } catch (e: Exception) {
-            Log.e(TAG, "Check binding failed: ${e.message}", e)
-            return false
-        }
-        if (!isValid) {
-            Log.w(TAG, "Binding check failed for key: $key")
-            return false
-        }
-        val (bindingSuccess, _) = try {
-            withContext(Dispatchers.IO) { userInfoManager.updateBinding(key, deviceId) }
-        } catch (e: Exception) {
-            Log.e(TAG, "Update binding failed: ${e.message}", e)
-            return false
-        }
-        if (!bindingSuccess) {
-            Log.w(TAG, "Binding update failed for key: $key")
-            return false
-        }
-        val today = SimpleDateFormat("yyyyMMdd", Locale.US).format(Date())
-        val cacheCodeFile = File(activity.filesDir, MainViewModel.CACHE_CODE_FILE)
-        if (cacheCodeFile.exists()) {
-            Log.d(TAG, "Clearing cacheCode.txt for key=$key")
-            cacheCodeFile.delete()
-        }
-        viewModel.clearCacheChannels()
-        val updatedDevices = if (validatedUser.devices.contains(deviceId)) {
-            validatedUser.devices
-        } else {
-            validatedUser.devices.toMutableList().apply { add(deviceId) }
-        }
-        val updatedUserInfo = UserInfo(
-            userId = key,
-            userLimitDate = validatedUser.userLimitDate,
-            userType = validatedUser.userType,
-            vipUserUrl = validatedUser.vipUserUrl,
-            maxDevices = validatedUser.maxDevices,
-            devices = updatedDevices,
-            userUpdateStatus = true,
-            updateDate = today
-        )
-        try {
-            withContext(Dispatchers.IO) { userInfoManager.saveUserInfo(updatedUserInfo) }
-            Log.d(TAG, "Saved updated userInfo for key=$key")
-        } catch (e: Exception) {
-            Log.e(TAG, "Save userInfo failed: ${e.message}", e)
-            return false
-        }
-        try {
-            withContext(Dispatchers.IO) {
-                Log.d(TAG, "Downloading new source from vipUserUrl=${validatedUser.vipUserUrl}")
-                viewModel.importFromUrl(validatedUser.vipUserUrl, skipHistory = true)
-            }
-            Log.d(TAG, "Download completed")
-            return true
-        } catch (e: Exception) {
-            Log.e(TAG, "Download failed: ${e.message}", e)
-            return false
-        }
     }
 
 }
