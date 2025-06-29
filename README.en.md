@@ -27,6 +27,10 @@ https://t.me/yourtvapp<br>
 <img src="./530.jpg" alt="image"/><br><br>
 <img src="./531.jpg" alt="image"/><br><br>
 ## Update History<br>
+### Updated on June 29, 2025<br>
+Fixed and enhanced support for Android 6.0 (API 23) and above<br>
+Fixed other bugs<br>
+(Tested only on the emulator, feedback is welcome)<br>
 ### Updated on June 22, 2025<br>
 Added live source information interface<br>
 -Long press or continuous click on TV to confirm/4 times on the center button to trigger)<br>
