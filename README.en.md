@@ -39,7 +39,6 @@ Added live source information interface<br>
 Switch live source to display the current line/bus line<br>
 Optimize the test code input UI/try to keep the same style of multiple interfaces<br>
 Multi-language support full repair<br>
-Segment analysis of large live source files<br>
 Fix other bugs/may bring new bugs<br>
 ### Updated on June 20, 2025<br>
 Released V1.8.3<br>
