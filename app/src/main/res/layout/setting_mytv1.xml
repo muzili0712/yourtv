@@ -41,6 +41,8 @@
                     android:textColor="@color/title_blur"
                     android:text="@string/app_name"
                     android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:background="@null"
                     android:focusable="true"
                     android:focusableInTouchMode="true"
                     android:nextFocusUp="@+id/switch_webview_type"
@@ -65,12 +67,13 @@
                 android:layout_marginBottom="10dp"
                 android:textColor="@color/title_blur"
                 android:textSize="14sp"
+                android:background="@null"
                 android:focusable="true"
                 android:focusableInTouchMode="true"
                 android:nextFocusUp="@+id/name"
                 android:nextFocusDown="@+id/remote_settings"
                 android:clickable="true"
-                android:text="項目地址：https://github.com/horsemail/yourtv" />
+                android:text="@string/project_address" />
             />
 
             <LinearLayout
@@ -81,11 +84,11 @@
                     android:id="@+id/remote_settings"
                     android:layout_width="100dp"
                     android:layout_height="wrap_content"
-                    android:background="@color/description_blur"
                     android:textColor="@color/blur"
                     android:layout_marginEnd="5dp"
                     android:textSize="14sp"
                     android:text="@string/server"
+                    android:textStyle="bold"
                     android:nextFocusRight="@id/confirm_config"
                     android:nextFocusLeft="@id/clear"
                     android:nextFocusUp="@+id/version"
@@ -98,11 +101,11 @@
                     android:id="@+id/confirm_config"
                     android:layout_width="100dp"
                     android:layout_height="wrap_content"
-                    android:background="@color/description_blur"
                     android:textColor="@color/blur"
                     android:layout_marginEnd="5dp"
                     android:textSize="14sp"
                     android:text="@string/channels"
+                    android:textStyle="bold"
                     android:nextFocusRight="@id/clear"
                     android:nextFocusLeft="@id/remote_settings"
                     android:nextFocusUp="@+id/version"
@@ -114,11 +117,11 @@
                     android:id="@+id/clear"
                     android:layout_width="100dp"
                     android:layout_height="wrap_content"
-                    android:background="@color/description_blur"
                     android:textColor="@color/blur"
                     android:layout_marginEnd="5dp"
                     android:text="@string/clear"
                     android:textSize="14sp"
+                    android:textStyle="bold"
                     android:nextFocusRight="@id/remote_settings"
                     android:nextFocusLeft="@id/confirm_config"
                     android:nextFocusUp="@+id/version"
@@ -136,11 +139,11 @@
                     android:id="@+id/check_version"
                     android:layout_width="100dp"
                     android:layout_height="wrap_content"
-                    android:background="@color/description_blur"
                     android:textColor="@color/blur"
                     android:layout_marginEnd="5dp"
                     android:textSize="14sp"
                     android:text="@string/check_version"
+                    android:textStyle="bold"
                     android:nextFocusRight="@id/verify_user"
                     android:nextFocusLeft="@id/appreciate"
                     android:nextFocusUp="@id/remote_settings"
@@ -151,11 +154,11 @@
                     android:id="@+id/exit"
                     android:layout_width="100dp"
                     android:layout_height="wrap_content"
-                    android:background="@color/description_blur"
                     android:textColor="@color/blur"
                     android:layout_marginEnd="5dp"
                     android:text="@string/install_webview_x5"
                     android:textSize="14sp"
+                    android:textStyle="bold"
                     android:nextFocusRight="@id/appreciate"
                     android:nextFocusLeft="@id/check_version"
                     android:nextFocusUp="@+id/confirm_config"
@@ -166,11 +169,11 @@
                     android:id="@+id/appreciate"
                     android:layout_width="100dp"
                     android:layout_height="wrap_content"
-                    android:background="@color/description_blur"
                     android:textColor="@color/blur"
                     android:layout_marginEnd="5dp"
                     android:text="@string/appreciate"
                     android:textSize="14sp"
+                    android:textStyle="bold"
                     android:nextFocusRight="@id/check_version"
                     android:nextFocusLeft="@id/verify_user"
                     android:nextFocusUp="@+id/clear"
@@ -269,8 +272,7 @@
                 android:nextFocusUp="@+id/switch_boot_startup"
                 android:nextFocusDown="@+id/switch_compact_menu"
                 app:thumbTint="@color/switch_thumb_color"
-                app:trackTint="@color/switch_track_color"
-                />
+                app:trackTint="@color/switch_track_color" />
             <androidx.appcompat.widget.SwitchCompat
                 android:id="@+id/switch_compact_menu"
                 android:text="@string/compact_menu"
@@ -280,10 +282,21 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:nextFocusUp="@+id/switch_config_auto_load"
+                android:nextFocusDown="@+id/switch_full_screen_mode"
+                app:thumbTint="@color/switch_thumb_color"
+                app:trackTint="@color/switch_track_color" />
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/switch_full_screen_mode"
+                android:text="@string/full_screen_mode"
+                android:textColor="@color/title_blur"
+                android:textSize="14sp"
+                android:layout_marginTop="5dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nextFocusUp="@+id/switch_compact_menu"
                 android:nextFocusDown="@+id/switch_webview_type"
                 app:thumbTint="@color/switch_thumb_color"
-                app:trackTint="@color/switch_track_color"
-                />
+                app:trackTint="@color/switch_track_color" />
             <androidx.appcompat.widget.SwitchCompat
                 android:id="@+id/switch_webview_type"
                 android:text="@string/switch_webview_type"
@@ -292,12 +305,10 @@
                 android:layout_marginTop="5dp"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:nextFocusUp="@+id/switch_compact_menu"
+                android:nextFocusUp="@+id/switch_full_screen_mode"
                 android:nextFocusDown="@+id/name"
                 app:thumbTint="@color/switch_thumb_color"
-                app:trackTint="@color/switch_track_color"
-                />
-
+                app:trackTint="@color/switch_track_color"/>
         </LinearLayout>
     </ScrollView>
 </LinearLayout>
