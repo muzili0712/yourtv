@@ -21,11 +21,11 @@ For mobile phones, it is best to enter the settings interface to switch to soft 
 ## Telegram Group
 https://t.me/yourtvapp<br>
 <img src="./appreciate.png" alt="image" width="200"/><br><br>
-<img src="./527.jpg" alt="image"/><br><br>
-<img src="./528.jpg" alt="image"/><br><br>
-<img src="./529.jpg" alt="image"/><br><br>
-<img src="./530.jpg" alt="image"/><br><br>
-<img src="./531.jpg" alt="image"/><br><br>
+<img src="./screenshots/527.jpg" alt="image"/><br><br>
+<img src="./screenshots/528.jpg" alt="image"/><br><br>
+<img src="./screenshots/529.jpg" alt="image"/><br><br>
+<img src="./screenshots/530.jpg" alt="image"/><br><br>
+<img src="./screenshots/531.jpg" alt="image"/><br><br>
 ## Update History<br>
 ### Updated on June 29, 2025<br>
 Fixed and enhanced support for Android 6.0 (API 23) and above<br>
