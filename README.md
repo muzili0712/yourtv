@@ -20,11 +20,11 @@ https://yourtvcrypto.horsenma.net<br>
 ## 電報群組
 https://t.me/yourtvapp<br><br>
 <img src="./appreciate.png" alt="image" width="200"/><br><br>
-<img src="./527.jpg" alt="image"/><br><br>
-<img src="./528.jpg" alt="image"/><br><br>
-<img src="./529.jpg" alt="image"/><br><br>
-<img src="./530.jpg" alt="image"/><br><br>
-<img src="./531.jpg" alt="image"/><br>
+<img src="./screenshots/527.jpg" alt="image"/><br><br>
+<img src="./screenshots/528.jpg" alt="image"/><br><br>
+<img src="./screenshots/529.jpg" alt="image"/><br><br>
+<img src="./screenshots/530.jpg" alt="image"/><br><br>
+<img src="./screenshots/531.jpg" alt="image"/><br>
 ## 更新歷史
 ###  2025年6月29日更新<br>
 修複和增強對安卓6.0（API 23）及以上版本的支持<br>
