@@ -3,9 +3,11 @@
 - [🇨🇳 中文說明](README.md)
 - [🇺🇸 English Version](README.en.md)
 # Your TV：Android Live TV APK
-Combines the functions of my-tv/my-tv-0/my-tv-1/mytv-android/WebViewTVLive and other projects.
+Support Android 6.0 (API23) and above<br>
+Combines the functions of my-tv/my-tv-0/my-tv-1/mytv-android/WebViewTVLive and other projects.<br>
 IPTV/web video player android APK software, with thousands of built-in live sources, customizable sources(
-(Supports webview:// format web video source)), IPTV supports picture-in-picture and off-screen playback.
+(Supports webview:// format web video source)), <br>
+IPTV supports picture-in-picture and off-screen playback.<br>
 [yourtv](https://github.com/horsemail/yourtv)
 <br>
 For testing only. After testing, please delete in time. <br>
