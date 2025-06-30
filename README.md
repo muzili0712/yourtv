@@ -26,10 +26,6 @@ https://t.me/yourtvapp<br><br>
 <img src="./screenshots/530.jpg" alt="image"/><br><br>
 <img src="./screenshots/531.jpg" alt="image"/><br>
 ## 更新歷史
-###  2025年6月29日更新<br>
-修複和增強對安卓6.0（API 23）及以上版本的支持<br>
-修複其它BUG<br>
-（僅在模擬器上測試，歡迎反饋問題）<br>
 ###  2025年6月22日更新<br>
 增加直播源信息界麵<br>
 -電視長按或連續點擊確認/中心鍵4次觸髮）<br>
