@@ -28,6 +28,10 @@ https://t.me/yourtvapp<br><br>
 <img src="./screenshots/530.jpg" alt="image"/><br><br>
 <img src="./screenshots/531.jpg" alt="image"/><br>
 ## 更新歷史
+###  2025年7月2日更新<br>
+支持安卓6.0的IPTV<br>
+可能支持安卓6.0的Webview(沒有測試驗証)<br>
+修複各種BUG<br>
 ###  2025年6月30日更新<br>
 修複和增強對安卓6.0（API-23）及以上版本的支持<br>
 修複其它BUG<br>
