@@ -29,6 +29,10 @@ https://t.me/yourtvapp<br>
 <img src="./screenshots/530.jpg" alt="image"/><br><br>
 <img src="./screenshots/531.jpg" alt="image"/><br><br>
 ## Update History<br>
+### Updated on July 2, 2025<br>
+Support Android 6.0 IPTV<br>
+May support Android 6.0 Webview (not tested)<br>
+Fix various BUGs<br>
 ### Updated on June 30, 2025<br>
 Fixed and enhanced support for Android 6.0 (API-23) and above<br>
 Fixed other bugs<br>
