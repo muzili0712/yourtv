@@ -6,7 +6,7 @@
 支持安卓6.0(API23)級以上版本<br>
 綜合my-tv/my-tv-0/my-tv-1/mytv-android/WebViewTVLive等項目的功能。<br>  
 IPTV/網頁視頻播放安卓APK軟件，支持腾讯webview x5，内置数千直播源，<br>
-可自定義源(支持webview://格式網頁視頻源)，IPTV支持畫中畫和熄屏播放。<br>
+可自定義源(支持webview://格式網頁視頻源)，支持畫中畫，IPTV支持熄屏播放。<br>
 [yourtv](https://github.com/horsemail/yourtv)
 <br>
 僅供測試，測試完，請及時刪除。<br>
