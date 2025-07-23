@@ -16,9 +16,7 @@ IPTV/網頁視頻播放安卓APK軟件，支持腾讯webview x5，内置数千�
 手機使用，最好進入設置界麵切換為軟解碼，否則有的直播源會沒聲音。<br>
 <img src="./screenshots/527.jpg" alt="image"/><br><br>
 <img src="./screenshots/528.jpg" alt="image"/><br><br>
-<img src="./screenshots/529.jpg" alt="image"/><br><br>
 <img src="./screenshots/530.jpg" alt="image"/><br><br>
-<img src="./screenshots/531.jpg" alt="image"/><br>
 ## 更新歷史
 ###  2025年7月4日更新<br>
 顯著改善直播源達到秒加載解析<br>
