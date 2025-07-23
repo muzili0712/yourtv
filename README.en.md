@@ -12,7 +12,7 @@ IPTV supports picture-in-picture and off-screen playback.<br>
 <br>
 For testing only. After testing, please delete in time. <br>
 ### 🔴 **Please read the [Instructions](#use) carefully. **
-<br>
+=<br>
 For mobile phones, it is best to enter the settings interface to switch to soft decoding, otherwise some live sources will have no sound. <br>
 <img src="./screenshots/527.jpg" alt="image"/><br><br>
 <img src="./screenshots/528.jpg" alt="image"/><br><br>
