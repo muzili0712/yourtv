@@ -15,10 +15,7 @@ For testing only. After testing, please delete in time. <br>
 =<br>
 For mobile phones, it is best to enter the settings interface to switch to soft decoding, otherwise some live sources will have no sound. <br>
 <img src="./screenshots/527.jpg" alt="image"/><br><br>
-<img src="./screenshots/528.jpg" alt="image"/><br><br>
-<img src="./screenshots/529.jpg" alt="image"/><br><br>
 <img src="./screenshots/530.jpg" alt="image"/><br><br>
-<img src="./screenshots/531.jpg" alt="image"/><br><br>
 ## Update History<br>
 ### Updated on July 4, 2025<br>
 Significantly improved live source to achieve seconds loading analysis<br>
