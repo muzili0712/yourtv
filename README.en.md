@@ -12,17 +12,8 @@ IPTV supports picture-in-picture and off-screen playback.<br>
 <br>
 For testing only. After testing, please delete in time. <br>
 ### 🔴 **Please read the [Instructions](#use) carefully. **
-## Online encryption and decryption: (compatible with Tvbox source encryption and decryption)
-https://yourtvcrypto.horsenma.net<br>
-Completely consistent with the encryption and decryption logic in the project<br>
 <br>
-## Test code
-The default hard decoding version is suitable for devices with better hardware decoding such as TVs. <br>
 For mobile phones, it is best to enter the settings interface to switch to soft decoding, otherwise some live sources will have no sound. <br>
-### 🔴 **If you need a test code, please join the TG group, the group will open the test code/or automatically issue/or apply for it. **<br>
-## Telegram Group
-https://t.me/yourtvapp<br>
-<img src="./appreciate.png" alt="image" width="200"/><br><br>
 <img src="./screenshots/527.jpg" alt="image"/><br><br>
 <img src="./screenshots/528.jpg" alt="image"/><br><br>
 <img src="./screenshots/529.jpg" alt="image"/><br><br>
