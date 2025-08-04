@@ -2,7 +2,7 @@
 
 - [🇨🇳 中文說明](README.MD)
 - [🇺🇸 English Version](README.en.md)
-# 你的電視：安卓電視直播APK
+# 你的電視：安卓電視/手机直播APK
 支持安卓6.0(API23)級以上版本<br>
 綜合my-tv/my-tv-0/my-tv-1/mytv-android/WebViewTVLive等項目的功能。<br>  
 IPTV/網頁視頻播放安卓APK軟件，支持腾讯webview x5，<br>
