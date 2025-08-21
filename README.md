@@ -10,12 +10,19 @@ IPTV/網頁視頻播放安卓APK軟件，支持腾讯webview x5，<br>
 [yourtv](https://github.com/horsemail/yourtv)
 <br>
 僅供測試，測試完，請及時刪除。<br>
-## 🔴 **請仔細閱讀後面的[使用說明](#使用)。**
-=
+## **請仔細閱讀後面的[使用說明](#使用)。**
+## 在線加密解密：（兼容Tvbox的接口源加密解密）
+https://yourtvcrypto.horsenma.net<br>
+與項目內加密解密邏輯完全一致<br>
+
+## 測試碼<br>
+如需測試碼，請加入TG群組，群組內公開測試碼/或自動髮放/或申請提供。<br>
+電報群組<br>
+https://t.me/yourtvapp<br>
+<img src="./screenshots/appreciate.jpg" alt="image" width="300" height="400"/><br><br>
 <br>
 手機使用，最好進入設置界麵切換為軟解碼，否則有的直播源會沒聲音。<br>
 <img src="./screenshots/527.jpg" alt="image"/><br><br>
-<img src="./screenshots/appreciate.jpg" alt="image" width="300" height="400"/><br><br>
 <img src="./screenshots/530.jpg" alt="image"/><br><br>
 ## 更新歷史
 ###  2025年7月4日更新<br>
