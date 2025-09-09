@@ -10,12 +10,21 @@ IPTV/web video player android APK software, customizable sources(
 IPTV supports picture-in-picture and off-screen playback.<br>
 [yourtv](https://github.com/horsemail/yourtv)
 <br>
-For testing only. After testing, please delete in time. <br>
+# <span style="color:red; font-weight:bold;">‼️For testing only. After testing, please delete in 24 hours.‼️ </span><br>
 ### 🔴 **Please read the [Instructions](#use) carefully. **
+## Online encryption and decryption: (TVBox-compatible interface source encryption and decryption)
+https://yourtvcrypto.horsenma.net<br>
+The encryption and decryption logic is identical to the project.<br>
+## Test Code
+### If you need a test code, please join the TG group. Test codes are publicly available in the group, automatically distributed, or requested. <br>
+Telegram Group<br>
+https://t.me/yourtvapp<br>
+<img src="./screenshots/appreciate.jpg" alt="image" width=200 /><br><br>
 =<br>
 For mobile phones, it is best to enter the settings interface to switch to soft decoding, otherwise some live sources will have no sound. <br>
 <img src="./screenshots/527.jpg" alt="image"/><br><br>
-<img src="./screenshots/530.jpg" alt="image"/><br><br>
+<img src="./screenshots/090901.jpg" alt="image"/><br><br>
+<img src="./screenshots/090902.jpg" alt="image"/><br><br>
 ## Update History<br>
 ### Updated on July 4, 2025<br>
 Significantly improved live source to achieve seconds loading analysis<br>
