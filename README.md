@@ -19,6 +19,7 @@ https://yourtvcrypto.horsenma.net<br>
 ###      如需測試碼，請加入TG群組，群組內公開測試碼/或自動髮放/或申請提供。<br>
 電報群組<br>
 https://t.me/yourtvapp<br>
+<img src="./screenshots/appreciate.jpg" alt="image"/><br><br>
 <br>
 手機使用，最好進入設置界麵切換為軟解碼，否則有的直播源會沒聲音。<br>
 <img src="./screenshots/527.jpg" alt="image"/><br><br>
