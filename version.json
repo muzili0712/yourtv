@@ -1,7 +1,7 @@
 {
-  "version_code": 195,
-  "version_name": "1.9.5",
-  "apk_url": "https://github.com/horsemail/yourtv/releases/download/v1.9.5/yourtv_v1.9.5.apk",
-  "apk_name": "yourtv_v1.9.5.apk",
-  "description": "1-大幅增加默認網頁頻道的頻道數/n 2-X5可設置自動下載安裝"
+  "version_code": 196,
+  "version_name": "1.9.6",
+  "apk_url": "https://github.com/horsemail/yourtv/releases/download/v1.9.6/yourtv_v1.9.6.apk",
+  "apk_name": "yourtv_v1.9.6.apk",
+  "description": "1-修復網頁視頻同頻道切換源失敗的BUG/n 2-優化注入腳本和修復其他BUG"
 }
