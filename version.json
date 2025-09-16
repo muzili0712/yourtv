@@ -1,7 +1,7 @@
 {
-  "version_code": 196,
-  "version_name": "1.9.6",
-  "apk_url": "https://github.com/horsemail/yourtv/releases/download/v1.9.6/yourtv_v1.9.6.apk",
-  "apk_name": "yourtv_v1.9.6.apk",
-  "description": "1-修復網頁視頻同頻道切換源失敗的BUG/n 2-優化注入腳本和修復其他BUG"
+  "version_code": 197,
+  "version_name": "1.9.7",
+  "apk_url": "https://github.com/horsemail/yourtv/releases/download/v1.9.7/yourtv_v1.9.7.apk",
+  "apk_name": "yourtv_v1.9.7.apk",
+  "description": "修復幾個BUG"
 }
