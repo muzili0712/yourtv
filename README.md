@@ -16,7 +16,7 @@ https://yourtvcrypto.horsenma.net<br>
 與項目內加密解密邏輯完全一致<br>
 
 ## 測試碼
-###      如需測試碼，請加入TG群組，群組內公開測試碼/或自動髮放/或申請提供。<br>
+###      如需測試碼，請加入TG群組，群組內不定期公開測試碼/或自動髮放/或申請提供。<br>
 電報群組<br>
 https://t.me/yourtvapp<br>
 <img src="./screenshots/appreciate.jpg" alt="image" width=200 /><br><br>
