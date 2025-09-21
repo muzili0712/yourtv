@@ -16,8 +16,7 @@ IPTV supports picture-in-picture and off-screen playback.<br>
 ## Online encryption and decryption: (TVBox-compatible interface source encryption and decryption)
 https://yourtvcrypto.horsenma.net<br>
 The encryption and decryption logic is identical to the project.<br>
-## Test Code
-### If you need a test code, please join the TG group. Test codes are publicly available in the group, automatically distributed, or requested. <br>
+
 Telegram Group<br>
 https://t.me/yourtvapp<br>
 <img src="./screenshots/appreciate.jpg" alt="image" width=200 /><br><br>
