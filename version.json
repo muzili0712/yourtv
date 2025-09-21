@@ -3,5 +3,5 @@
   "version_name": "1.9.10",
   "apk_url": "https://github.com/horsemail/yourtv/releases/download/v1.9.10/yourtv_v1.9.10.apk",
   "apk_name": "yourtv_v1.9.10.apk",
-  "description": "修復IPTV播放重大BUG/n建議務必更新"
+  "description": "修複UA自定義支持不佳的BUG/n改善播放錯誤提示的畫麵"
 }
