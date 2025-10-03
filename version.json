@@ -1,7 +1,7 @@
 {
-  "version_code": 202,
-  "version_name": "2.0.2",
-  "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.0.2/yourtv_v2.0.2.apk",
-  "apk_name": "yourtv_v2.0.2.apk",
-  "description": "1、重構WEBVIEW大幅優化播放性能\n2、大幅更新默認網頁视频頻道"
+  "version_code": 203,
+  "version_name": "2.0.3",
+  "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.0.3/yourtv_v2.0.3.apk",
+  "apk_name": "yourtv_v2.0.3.apk",
+  "description": "組名稱增加：_密碼 的支持\n输入密码才显示该组频道"
 }
