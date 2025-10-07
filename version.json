@@ -1,7 +1,7 @@
 {
-  "version_code": 203,
-  "version_name": "2.0.3",
-  "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.0.3/yourtv_v2.0.3.apk",
-  "apk_name": "yourtv_v2.0.3.apk",
-  "description": "組名稱增加：_密碼 的支持\n输入密码才显示该组频道"
+  "version_code": 204,
+  "version_name": "2.0.4",
+  "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.0.4/yourtv_v2.0.4.apk",
+  "apk_name": "yourtv_v2.0.4.apk",
+  "description": "加強遠程配置的功能\n支持使用共享直播源"
 }
