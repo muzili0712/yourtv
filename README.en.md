@@ -42,7 +42,7 @@ Added live source information interface<br>
 -Long press on the lower right virtual switch source button on the phone to trigger<br>
 -Retain the original long press or continuous click on the right button 4 times to enter the settings interface<br>
 Switch live source to display the current line/bus line<br>
-Optimize the test code input UI/try to keep the same style of multiple interfaces<br>
+Optimize the  input UI/try to keep the same style of multiple interfaces<br>
 Multi-language support full repair<br>
 Fix other bugs/may bring new bugs<br>
 ### Updated on June 20, 2025<br>
@@ -65,9 +65,9 @@ webview:// https://xxx 及类似源和 https://abc.com/cctv1.m3u8 混合源<br>
 ### Updated on June 11, 2025<br>
 Released version 1.7.7<br>
 Fixed the issue of no sound when playing on mobile phones of some channels/invalid soft decoding switch<br>
-Each time the valid test code is downloaded, the live source is directly updated<br>
+Each time the valid  is downloaded, the live source is directly updated<br>
 (The original logic uses the cache within 24 hours without downloading)<br>
-The test code can only be entered once within 10 minutes<br>
+The  can only be entered once within 10 minutes<br>
 ### Updated on June 9, 2025<br>
 Released version 1.7.6<br>
 Added automatic version detection<br>
@@ -116,7 +116,7 @@ Fix the problem of stopping the playback of picture-in-picture<br>
 Fix the problem of updating the application version and downloading unsmoothly<br>
 Delete some unnecessary display information to reduce visual interference<br>
 ### Updated on May 13, 2025<br>
-Newly adopt cloudflare's D1 and R2 to store test code information and encrypted live source files<br>
+Newly adopt cloudflare's D1 and R2 to store  information and encrypted live source files<br>
 Improve the live source loading experience<br>
 The original github repository storage is reserved as a backup and fallback mechanism<br>
 The version is changed to 1.6<br>
@@ -140,19 +140,19 @@ Added settings to automatically update the live source settings every day<br>
 Combined the above updates<br>
 Fixed the bug of automatically switching the live source to avoid abnormal switching<br>
 ### Updated on April 29, 2025<br>
-Added a device binding test code, one test code can bind up to 5 devices<br>
-Added a test code binding information backup mechanism<br>
+Added a device binding , one  can bind up to 5 devices<br>
+Added a  binding information backup mechanism<br>
 ### Updated on April 28, 2025<br>
-Enter the content to be converted here. Test code verification is placed at the original exit button of the settings interface<br>
+Enter the content to be converted here.  verification is placed at the original exit button of the settings interface<br>
 Add automatic source change settings<br>
 Apply update correction, try to provide automatic uninstall and manual update without success, direct update is effective<br>
 Optimize the order of boot playback source selection, record the stable source played by the user as the boot source<br>
-The live source used by the test code is not displayed in any interface such as history record<br>
+The live source used by the  is not displayed in any interface such as history record<br>
 Optimize the logic of all downloaded files, especially the download of github private warehouse files, reduce delays, and improve the experience<br>
 Improve the problem of APP jamming when entering the first use, and delay the download of online live sources<br>
 The confirmation of the smooth addition of the live source of CCTV 1 ensures smooth playback when entering the first use<br>
 ### Updated on April 26, 2025<br>
-Temporarily delete the test code verification mechanism and boot screen, and directly enter the default playback. <br>
+Temporarily delete the  verification mechanism and boot screen, and directly enter the default playback. <br>
 Improve the experience<br>
 <br>
 ### Updated on April 24, 2025<br>
