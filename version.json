@@ -1,7 +1,7 @@
 {
-  "version_code": 205,
-  "version_name": "2.0.5",
-  "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.0.5/yourtv_v2.0.5.apk",
-  "apk_name": "yourtv_v2.0.5.apk",
-  "description": "設置-換視頻源-緩存改刷新訂閱，超1天自動更新\n增加長按分組隱藏，雙擊紅色X恢復"
+  "version_code": 206,
+  "version_name": "2.0.6",
+  "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.0.6/yourtv_v2.0.6.apk",
+  "apk_name": "yourtv_v2.0.6.apk",
+  "description": "增加使用說明小提示\n優先使用本地颱標logo"
 }
