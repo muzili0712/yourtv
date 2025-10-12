@@ -1,7 +1,7 @@
 {
-  "version_code": 206,
-  "version_name": "2.0.6",
-  "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.0.6/yourtv_v2.0.6.apk",
-  "apk_name": "yourtv_v2.0.6.apk",
-  "description": "增加使用說明小提示\n優先使用本地颱標logo"
+  "version_code": 207,
+  "version_name": "2.0.7",
+  "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.0.7/yourtv_v2.0.7.apk",
+  "apk_name": "yourtv_v2.0.7.apk",
+  "description": "緊急修復v2.0.6版本閃退的問題"
 }
