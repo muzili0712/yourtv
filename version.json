@@ -1,7 +1,7 @@
 {
-  "version_code": 208,
-  "version_name": "2.0.8",
-  "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.0.8/yourtv_v2.0.8.apk",
-  "apk_name": "yourtv_v2.0.8.apk",
-  "description": "默認IPTV頻道改定期在線自動更新\n修復已知的BUG"
+  "version_code": 209,
+  "version_name": "2.0.9",
+  "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.0.9/yourtv_v2.0.9.apk",
+  "apk_name": "yourtv_v2.0.9.apk",
+  "description": "修复遠程配置不支持http和本地链接的BUG\n修復其他已知BUG"
 }
