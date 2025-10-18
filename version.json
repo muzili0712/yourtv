@@ -3,5 +3,5 @@
   "version_name": "2.1.0",
   "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.1.0/yourtv_v2.1.0.apk",
   "apk_name": "yourtv_v2.1.0.apk",
-  "description": "修復當前直播源跳回默認IPTV頻道源的BUG\n修復穩定源邏輯等BUG"
+  "description": "修復當前直播源跳回默認IPTV頻道源\n修復穩定源邏輯等BUG"
 }
