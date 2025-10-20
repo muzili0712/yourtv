@@ -1,7 +1,7 @@
 {
-  "version_code": 211,
-  "version_name": "2.1.1",
-  "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.1.1/yourtv_v2.1.1.apk",
-  "apk_name": "yourtv_v2.1.1.apk",
-  "description": "完善對RTSP/RTMP/加密DASH MPD源的支持\n修復其他已知BUG"
+  "version_code": 212,
+  "version_name": "2.1.2",
+  "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.1.2/yourtv_v2.1.2.apk",
+  "apk_name": "yourtv_v2.1.2.apk",
+  "description": "重大BUG修複\n默認網頁頻道從遠程配置中手動加載"
 }
