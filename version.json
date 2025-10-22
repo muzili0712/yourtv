@@ -3,5 +3,5 @@
   "version_name": "2.1.4",
   "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.1.4/yourtv_v2.1.4.apk",
   "apk_name": "yourtv_v2.1.4.apk",
-  "description": "緊急修復遠程配置視頻源文本/文件上傳沒反應的BUG"
+  "description": "修復遠程配置文本/文件沒反應的BUG\n‼️立即更新否則APP後續不可用"
 }
