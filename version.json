@@ -3,5 +3,5 @@
   "version_name": "2.1.6",
   "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.1.6/yourtv_v2.1.6.apk",
   "apk_name": "yourtv_v2.1.6.apk",
-  "description": "改善播放器邏輯"
+  "description": "改善播放器邏輯\n修複menu菜單直播源文件切換回跳BUG"
 }
