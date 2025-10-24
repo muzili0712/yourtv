@@ -96,7 +96,3 @@ adb install YourTV.apk
 [my-tv-0](https://github.com/lizongying/my-tv-0)<br>
 [my-tv-1](https://github.com/lizongying/my-tv-1)<br>
 
-## 致歉
-
-本人並不懂代碼，更不懂開發，純粹現在空閒愛好打發時間。所有代碼都AI實現。
-github上很多功能也還不會用。
