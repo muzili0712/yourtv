@@ -3,5 +3,5 @@
   "version_name": "2.1.7",
   "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.1.7/yourtv_v2.1.7.apk",
   "apk_name": "yourtv_v2.1.7.apk",
-  "description": "增加遠程配置中留言和回覆功能\n修復已知的各種BUG"
+  "description": "增加遠程配置中留言和回覆功能\n修復數個已知的各種BUG"
 }
