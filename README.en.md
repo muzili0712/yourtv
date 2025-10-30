@@ -10,8 +10,6 @@ IPTV/web video player android APK software, customizable sources(
 IPTV supports picture-in-picture and off-screen playback.<br>
 [yourtv](https://github.com/horsemail/yourtv)
 <br>
-# <span style="color:red; font-weight:bold;">‼️For testing only. After testing, please delete in 24 hours.‼️ </span><br>
-# <span style="color:red; font-weight:bold;">‼️Forwarding to any platform in mainland China is strictly prohibited.‼ ️Please delete immediately if already published‼️ </span><br>
 ### 🔴 **Please read the [Instructions](#use) carefully. **
 ## Online encryption and decryption: (TVBox-compatible interface source encryption and decryption)
 https://yourtvcrypto.horsenma.net<br>
