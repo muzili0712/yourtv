@@ -23,9 +23,6 @@ https://t.me/yourtvapp<br>
 <img src="./screenshots/090901.jpg" alt="image"/><br><br>
 <img src="./screenshots/090902.jpg" alt="image"/><br><br>
 <br>
-###  2025年4月21日第一次正式發佈，使用說明：<br>
-APP本身有自動切換直播源，你也可以手動切換直播源。<br>
-<br>
 ## 使用
 
 電視機：<br>
