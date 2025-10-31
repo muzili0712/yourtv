@@ -1,7 +1,7 @@
 {
-  "version_code": 218,
-  "version_name": "2.1.8",
-  "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.1.8/yourtv_v2.1.8.apk",
-  "apk_name": "yourtv_v2.1.8.apk",
-  "description": "增加遠程配置中留言和回覆功能\n修復數個已知的各種BUG"
+  "version_code": 219,
+  "version_name": "2.1.9",
+  "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.1.9/yourtv_v2.1.9.apk",
+  "apk_name": "yourtv_v2.1.9.apk",
+  "description": "增加使用說明頁，完善遠程配置頁\n修復各種已知BUG"
 }
