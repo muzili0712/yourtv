@@ -3,5 +3,5 @@
   "version_name": "2.1.9",
   "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.1.9/yourtv_v2.1.9.apk",
   "apk_name": "yourtv_v2.1.9.apk",
-  "description": "增加使用說明頁，完善遠程配置頁\n恢復舊版所有功能"
+  "description": "增加使用說明頁，完善遠程配置頁\n修復已知BUG"
 }
