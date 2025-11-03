@@ -1,7 +1,7 @@
 {
-  "version_code": 220,
-  "version_name": "2.2.0",
-  "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.2.0/yourtv_v2.2.0.apk",
-  "apk_name": "yourtv_v2.2.0.apk",
-  "description": "完善遠程配置頁面留言功能可實時回覆等\n修復其他已知BUG"
+  "version_code": 221,
+  "version_name": "2.2.1",
+  "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.2.1/yourtv_v2.2.1.apk",
+  "apk_name": "yourtv_v2.2.1.apk",
+  "description": "完善直播源遠程配置頁面的功能\n觸摸屏長按右側顯示設置菜單"
 }
