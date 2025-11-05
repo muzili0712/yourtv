@@ -17,8 +17,6 @@ https://yourtvcrypto.horsenma.net<br>
 電報群組<br>
 https://t.me/yourtvapp<br>
 <img src="./screenshots/appreciate.jpg" alt="image" width=200 /><br><br>
-<br>
-手機使用，最好進入設置界麵切換為軟解碼，否則有的直播源會沒聲音。<br>
 <img src="./screenshots/527.jpg" alt="image"/><br><br>
 <img src="./screenshots/090901.jpg" alt="image"/><br><br>
 <img src="./screenshots/090902.jpg" alt="image"/><br><br>
