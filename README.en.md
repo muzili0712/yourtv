@@ -18,8 +18,6 @@ The encryption and decryption logic is identical to the project.<br>
 Telegram Group<br>
 https://t.me/yourtvapp<br>
 <img src="./screenshots/appreciate.jpg" alt="image" width=200 /><br><br>
-=<br>
-For mobile phones, it is best to enter the settings interface to switch to soft decoding, otherwise some live sources will have no sound. <br>
 <img src="./screenshots/527.jpg" alt="image"/><br><br>
 <img src="./screenshots/090901.jpg" alt="image"/><br><br>
 <img src="./screenshots/090902.jpg" alt="image"/><br><br>
