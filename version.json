@@ -1,7 +1,7 @@
 {
-  "version_code": 225,
-  "version_name": "2.2.5",
-  "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.2.5/yourtv_v2.2.5.apk",
-  "apk_name": "yourtv_v2.2.5.apk",
-  "description": "修復部分設備遠程配置頁面頻繁刷新問題\n‼️版本太舊將無法使用請立即更新‼️"
+  "version_code": 226,
+  "version_name": "2.2.6",
+  "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.2.6/yourtv_v2.2.6.apk",
+  "apk_name": "yourtv_v2.2.6.apk",
+  "description": "改善設置頁面外觀和優化所有焦點管理\n‼️版本太舊將無法使用請立即更新‼️"
 }
