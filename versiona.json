@@ -7,23 +7,23 @@
   "apks": {
     "universal": {
       "name": "yourtv_s2.2.8.apk",
-      "url": "https://github.com/horsemail/yourtv/releases/download/v2.2.8/yourtv_s2.2.8.apk"
+      "url": "https://github.com/horsemail/yourtv/releases/download/s2.2.8/yourtv_s2.2.8.apk"
     },
     "armeabi-v7a": {
       "name": "yourtv_s2.2.8_armeabi-v7a.apk",
-      "url": "https://github.com/horsemail/yourtv/releases/download/v2.2.8/yourtv_s2.2.8_armeabi-v7a.apk"
+      "url": "https://github.com/horsemail/yourtv/releases/download/s2.2.8/yourtv_s2.2.8_armeabi-v7a.apk"
     },
     "arm64-v8a": {
       "name": "yourtv_s2.2.8_arm64-v8a.apk",
-      "url": "https://github.com/horsemail/yourtv/releases/download/v2.2.8/yourtv_s2.2.8_arm64-v8a.apk"
+      "url": "https://github.com/horsemail/yourtv/releases/download/s2.2.8/yourtv_s2.2.8_arm64-v8a.apk"
     },
     "x86": {
       "name": "yourtv_s2.2.8_x86.apk",
-      "url": "https://github.com/horsemail/yourtv/releases/download/v2.2.8/yourtv_s2.2.8_x86.apk"
+      "url": "https://github.com/horsemail/yourtv/releases/download/s2.2.8/yourtv_s2.2.8_x86.apk"
     },
     "x86_64": {
       "name": "yourtv_s2.2.8_x86_64.apk",
-      "url": "https://github.com/horsemail/yourtv/releases/download/v2.2.8/yourtv_s2.2.8_x86_64.apk"
+      "url": "https://github.com/horsemail/yourtv/releases/download/s2.2.8/yourtv_s2.2.8_x86_64.apk"
     }
   }
 }
