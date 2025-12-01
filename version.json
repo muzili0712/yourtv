@@ -3,7 +3,7 @@
   "version_name": "2.2.7",
   "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.2.7/yourtv_v2.2.7.apk",
   "apk_name": "yourtv_v2.2.7.apk",
-  "description": "增頻道預覽和多架構APK(全新安裝)\n更新播放器內核版本。修復已知BUG",
+  "description": "增頻道預覽和多架構APK(需全新安裝)\n更新播放器內核版本。修復已知BUG",
   "apks": {
     "universal": {
       "name": "yourtv_s2.2.7.apk",
