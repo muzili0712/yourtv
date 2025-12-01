@@ -1,7 +1,29 @@
 {
-  "version_code": 226,
-  "version_name": "2.2.6",
-  "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.2.6/yourtv_v2.2.6.apk",
-  "apk_name": "yourtv_v2.2.6.apk",
-  "description": "改善設置頁面外觀和優化所有焦點管理\n‼️版本太舊將無法使用請立即更新‼️"
+  "version_code": 227,
+  "version_name": "2.2.7",
+  "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.2.7/yourtv_v2.2.7.apk",
+  "apk_name": "yourtv_v2.2.7.apk",
+  "description": "增加頻道顯示預覽圖和多架構APK\n修復已知的BUG。舊版可能無法使用",
+  "apks": {
+    "universal": {
+      "name": "yourtv_s2.2.7.apk",
+      "url": "https://github.com/horsemail/yourtv/releases/download/v2.2.7/yourtv_s2.2.7.apk"
+    },
+    "armeabi-v7a": {
+      "name": "yourtv_s2.2.7_armeabi-v7a.apk",
+      "url": "https://github.com/horsemail/yourtv/releases/download/v2.2.7/yourtv_s2.2.7_armeabi-v7a.apk"
+    },
+    "arm64-v8a": {
+      "name": "yourtv_s2.2.7_arm64-v8a.apk",
+      "url": "https://github.com/horsemail/yourtv/releases/download/v2.2.7/yourtv_s2.2.7_arm64-v8a.apk"
+    },
+    "x86": {
+      "name": "yourtv_s2.2.7_x86.apk",
+      "url": "https://github.com/horsemail/yourtv/releases/download/v2.2.7/yourtv_s2.2.7_x86.apk"
+    },
+    "x86_64": {
+      "name": "yourtv_s2.2.7_x86_64.apk",
+      "url": "https://github.com/horsemail/yourtv/releases/download/v2.2.7/yourtv_s2.2.7_x86_64.apk"
+    }
+  }
 }
