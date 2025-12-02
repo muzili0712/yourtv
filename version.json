@@ -7,7 +7,7 @@
   "apks": {
     "universal": {
       "name": "yourtv_v2.2.7_universal.apk",
-      "url": "https://github.com/horsemail/yourtv/releases/download/v2.2.7/yourtv_v2.2.7.apk"
+      "url": "https://github.com/horsemail/yourtv/releases/download/v2.2.7/yourtv_v2.2.7_universal.apk.apk"
     },
     "armeabi-v7a": {
       "name": "yourtv_v2.2.7_armeabi-v7a.apk",
