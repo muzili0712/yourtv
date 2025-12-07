@@ -3,7 +3,7 @@
   "version_name": "2.2.8",
   "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.2.8/yourtv_v2.2.8.apk",
   "apk_name": "yourtv_v2.2.8.apk",
-  "description": "新增APP和直播源文件的密碼鎖\n新版本開放限量測試先到先得",
+  "description": "新增APP和直播源文件的密碼鎖\n修復已知BUG",
   "apks": {
     "universal": {
       "name": "yourtv_v2.2.8_universal.apk",
