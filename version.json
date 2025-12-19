@@ -1,7 +1,7 @@
 {
-  "version_code": 230,
+  "version_code": 229,
   "version_name": "2.3.0",
-  "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.3.0/yourtv_v2.3.0.apk",
-  "apk_name": "yourtv_v2.3.0.apk",
+  "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.2.9/yourtv_v2.2.9.apk",
+  "apk_name": "yourtv_v2.2.9.apk",
   "description": "增加頻道數量顯示，增加設置界面密碼\n換直播源按鈕處可輸入直播源清單訂閱地址"
 }
