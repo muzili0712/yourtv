@@ -3,5 +3,5 @@
   "version_name": "2.3.1",
   "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.3.1/yourtv_v2.3.1.apk",
   "apk_name": "yourtv_v2.3.1.apk",
-  "description": "增加頻道數量顯示，增加設置界面密碼\n換直播源按鈕處可輸入直播源清單訂閱地址"
+  "description": "增加音軌和字幕選擇按鈕，修復已知的BUG\n預祝大家新年快樂"
 }
