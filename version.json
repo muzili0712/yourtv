@@ -1,7 +1,7 @@
 {
-  "version_code": 231,
-  "version_name": "2.3.1",
-  "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.3.1/yourtv_v2.3.1.apk",
-  "apk_name": "yourtv_v2.3.1.apk",
-  "description": "增加音軌和字幕選擇按鈕，修復已知的BUG\n預祝大家新年快樂"
+  "version_code": 232,
+  "version_name": "2.3.2",
+  "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.3.2/yourtv_v2.3.2.apk",
+  "apk_name": "yourtv_v2.3.2.apk",
+  "description": "頻道菜單首行增加手動刷新直播源按鈕\n新用戶和留言建議被採納用戶提供福利"
 }
