@@ -27,7 +27,7 @@ The APP itself can automatically switch the live source, and you can also switch
 ## Use
 
 TV:<br>
-1. Turn on the TV and download the live source resources. Please wait patiently for 5-30 seconds.<br>
+1. Turn on the TV. Please wait patiently for 3-5 seconds.<br>
 2. Confirm/center key: pop up the group/channel list, select the group/channel up, down, left, and right, confirm the selected channel, right key to collect/cancel collection<br>
 3. Up/down key: switch channels<br>
 4. Left key: display program list information<br>
