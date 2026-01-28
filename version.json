@@ -1,7 +1,7 @@
 {
-  "version_code": 20302,
-  "version_name": "2.3.2",
-  "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.3.2/yourtv_v2.3.2.apk",
-  "apk_name": "yourtv_v2.3.2.apk",
-  "description": "頻道菜單首行增加手動刷新直播源按鈕\n新用戶和留言建議被採納用戶提供福利"
+  "version_code": 20303,
+  "version_name": "2.3.3",
+  "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.3.3/yourtv_v2.3.3.apk",
+  "apk_name": "yourtv_v2.3.3.apk",
+  "description": "修復線路選擇和訂閱地址清單文件地址的BUG\n修復其他已知BUG。"
 }
