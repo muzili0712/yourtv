@@ -1,7 +1,7 @@
 {
-  "version_code": 20303,
-  "version_name": "2.3.3",
-  "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.3.3/yourtv_v2.3.3.apk",
-  "apk_name": "yourtv_v2.3.3.apk",
-  "description": "修復線路選擇和訂閱地址清單文件地址的BUG\n修復其他已知BUG。"
+  "version_code": 20304,
+  "version_name": "2.3.4",
+  "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.3.4/yourtv_v2.3.4.apk",
+  "apk_name": "yourtv_v2.3.4.apk",
+  "description": "紧急修复高级功能未默认全局开启的BUG\n及时更新版本有福利。"
 }
