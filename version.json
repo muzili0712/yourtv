@@ -1,7 +1,7 @@
 {
-  "version_code": 20304,
-  "version_name": "2.3.4",
-  "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.3.4/yourtv_v2.3.4.apk",
-  "apk_name": "yourtv_v2.3.4.apk",
-  "description": "紧急修复高级功能未默认全局开启的BUG\n及时更新版本有福利。"
+  "version_code": 20305,
+  "version_name": "2.3.5",
+  "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.3.5/yourtv_v2.3.5.apk",
+  "apk_name": "yourtv_v2.3.5.apk",
+  "description": "遠程配置頁面增加註冊登錄高級功能按鈕\n支持多直播源文件簡單合併修復已知BUG"
 }
