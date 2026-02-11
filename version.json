@@ -1,7 +1,7 @@
 {
-  "version_code": 20305,
-  "version_name": "2.3.5",
-  "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.3.5/yourtv_v2.3.5.apk",
-  "apk_name": "yourtv_v2.3.5.apk",
-  "description": "遠程配置頁面增加註冊登錄高級功能按鈕\n支持多直播源文件簡單合併看春晚無憂了"
+  "version_code": 20306,
+  "version_name": "2.3.6",
+  "apk_url": "https://github.com/horsemail/yourtv/releases/download/v2.3.6/yourtv_v2.3.6.apk",
+  "apk_name": "yourtv_v2.3.6.apk",
+  "description": "改善註冊/登錄高級功能的使用體驗\n預祝大家馬年快樂！看春晚無憂版"
 }
